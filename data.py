@@ -2,8 +2,7 @@ import json
 import cv2
 import matplotlib.pyplot as plt
 import numpy as np
-import torch
-
+from torch.utils.data import Dataset
 
 def load_json(filename):
     with open(filename) as f:
@@ -44,6 +43,12 @@ def load_data(filename):
     filtered_data = np.array(filtered_data)
 
     print(filtered_data.shape)
+
+
+class PolyvoreDataset(Dataset):
+    def __init__(self, json_filename):
+        self.json_filename = json_filename
+
 
 def main():
     json_data = load_data("polyvore-dataset/train_no_dup.json")
