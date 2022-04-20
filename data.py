@@ -1,8 +1,11 @@
 import json
 
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
-from torch.utils.data import Dataset
+import torch
+from torch.utils.data import Dataset, DataLoader
+from torchvision import transforms
 
 
 def load_json(filename):
@@ -67,12 +70,48 @@ class PolyvoreDataset(Dataset):
         return sample
 
 
+class Resize(object):
+    def __init__(self, output_size):
+        assert isinstance(output_size, (int, tuple))
+        self.output_size = output_size
+
+    def __call__(self, sample):
+        names = sample["name"]
+        ids = sample["categoryid"]
+        images = sample["image"]
+
+        for i, image in enumerate(images):
+            if isinstance(self.output_size, int):
+                new_w = self.output_size
+                new_h = self.output_size
+            else:
+                new_w, new_h = self.output_size
+
+            images[i] = cv2.resize(image, (new_w, new_h))
+
+        return {"name": names, "categoryid": ids, "image": images}
+
+
+class ToTensor(object):
+    def __call__(self, sample):
+        names = sample["name"]
+        ids = sample["categoryid"]
+        images = sample["image"]
+
+        # names = torch.from_numpy(names)
+        ids = torch.from_numpy(ids)
+        for i, image in enumerate(images):
+            image = np.transpose(image, (2, 0, 1))
+            image = torch.from_numpy(image)
+            image = image.type("torch.FloatTensor")
+            images[i] = image
+
+        return {"name": names, "categoryid": ids, "image": images}
+
 def main():
-    dataset = PolyvoreDataset("polyvore-dataset/train_no_dup.json")
-    # dataloader = DataLoader(dataset, batch_size=4, shuffle=True)
-    #
-    # for i, batch in enumerate(dataloader):
-    #     print(i, batch)
+    dataset = PolyvoreDataset("polyvore-dataset/train_no_dup.json", transform=transforms.Compose([
+        Resize(400), ToTensor()
+    ]))
 
 
 if __name__ == "__main__":
