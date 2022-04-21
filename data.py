@@ -65,14 +65,19 @@ class PolyvoreDataset(Dataset):
             outfit["name"] = new_names
 
     def __fix_sizes(self):
-        for outfit in self.data:
+        for i, outfit in enumerate(self.data):
             names = outfit["name"]
             for i, name in enumerate(names):
                 if len(name) < 10:  # Item descriptions have a maximum of 10 words.
-                    names[i] = np.append(name, 0)
+                    for _ in range(10 - len(name)):
+                        names[i] = np.append(names[i], 0)
 
             if len(names) < 8:  # Outfit has a maximum of 8 items
-                names.append(np.array([0] * 10))
+                for _ in range(8 - len(names)):
+                    names.append(np.array([0] * 10))
+
+            # print(np.array(names))
+            self.data[i]["name"] = np.array(names)
 
             # categoryid = outfit["categoryid"]
             # image = outfit["image_filename"]
@@ -146,7 +151,9 @@ def main():
         Resize(400), ToTensor()
     ]))
 
-    loader = DataLoader(dataset, batch_size=1, shuffle=True)
+    print(dataset[0])
+
+    # loader = DataLoader(dataset, batch_size=1, shuffle=True)
 
     # print(next(iter(loader)))
 
