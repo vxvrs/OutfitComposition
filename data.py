@@ -3,54 +3,79 @@ import json
 import cv2
 import numpy as np
 import torch
-from torch.utils.data import Dataset
+from torch.utils.data import Dataset, DataLoader
 from torchvision import transforms
-
-
-def load_json(filename):
-    with open(filename) as f:
-        return json.load(f)
-
-
-def load_image(filename):
-    img = cv2.imread(filename)
-    return img[..., ::-1]
-    # img = np.transpose(img, (2, 0, 1))
-    # print(img.shape)
-    # img_tensor = torch.from_numpy(img)
-    # img_tensor = img_tensor.type("torch.FloatTensor")
-    # img_tensor *= 1/255
-    # img_tensor = img_tensor.unsqueeze(0)
-    # print(img_tensor.shape)
-    # return img_tensor
-
-
-def load_data(filename):
-    json_data = load_json(filename)
-
-    filtered_data = list()
-    for data in json_data:
-        outfit = dict([(key, list()) for key in ["name", "categoryid", "image_filename"]])
-
-        for item in data["items"]:
-            if item["name"] != "polyvore" and item["name"] != "":
-                outfit["name"].append(item["name"])
-                outfit["categoryid"].append(item["categoryid"])
-                image_filename = f"polyvore-dataset/images/{data['set_id']}/{item['index']}.jpg"
-                outfit["image_filename"].append(image_filename)
-
-        outfit["name"] = np.array(outfit["name"])
-        outfit["categoryid"] = np.array(outfit["categoryid"])
-        outfit["image_filename"] = np.array(outfit["image_filename"])
-        filtered_data.append(outfit)
-
-    return np.array(filtered_data)
 
 
 class PolyvoreDataset(Dataset):
     def __init__(self, json_filename, transform=None):
-        self.data = load_data(json_filename)
+        self.data = self.load_data(json_filename)
         self.transform = transform
+        self.word_idx, self.idx_word = self.__word_to_idx()
+        self.__convert_names()
+        self.__fix_sizes()
+
+    def load_data(self, filename):
+        with open(filename) as f:
+            json_data = json.load(f)
+
+        filtered_data = list()
+        for data in json_data:
+            outfit = dict([(key, list()) for key in ["name", "categoryid", "image_filename"]])
+
+            for item in data["items"]:
+                if item["name"] != "polyvore" and item["name"] != "":
+                    outfit["name"].append(' '.join(item["name"].split(' ')[:10]))
+                    outfit["categoryid"].append(item["categoryid"])
+                    image_filename = f"polyvore-dataset/images/{data['set_id']}/{item['index']}.jpg"
+                    outfit["image_filename"].append(image_filename)
+
+            outfit["name"] = np.array(outfit["name"])
+            outfit["categoryid"] = np.array(outfit["categoryid"])
+            outfit["image_filename"] = np.array(outfit["image_filename"])
+            filtered_data.append(outfit)
+
+        return np.array(filtered_data)
+
+    def __word_to_idx(self):
+        name_count = dict()
+        for outfit in self.data:
+            for name in outfit["name"]:
+                for word in name.split(' '):
+                    if word not in name_count:
+                        name_count[word] = 1
+                    else:
+                        name_count[word] += 1
+
+        index = 1
+        word_idx = dict()
+        idx_word = dict()
+        for word, count in name_count.items():
+            if count > 30:
+                word_idx[word] = index
+                idx_word[index] = word
+                index += 1
+
+        return word_idx, idx_word
+
+    def __convert_names(self):
+        for outfit in self.data:
+            new_names = [np.array([self.word_idx[word] for word in name.split() if word in self.word_idx]) for name in
+                         outfit["name"]]
+            outfit["name"] = new_names
+
+    def __fix_sizes(self):
+        for outfit in self.data:
+            names = outfit["name"]
+            for i, name in enumerate(names):
+                if len(name) < 10:  # Item descriptions have a maximum of 10 words.
+                    names[i] = np.append(name, 0)
+
+            if len(names) < 8:  # Outfit has a maximum of 8 items
+                names.append(np.array([0] * 10))
+
+            # categoryid = outfit["categoryid"]
+            # image = outfit["image_filename"]
 
     def __len__(self):
         return len(self.data)
@@ -59,7 +84,7 @@ class PolyvoreDataset(Dataset):
         name = self.data[idx]["name"]
         categoryid = self.data[idx]["categoryid"]
         image_filename = self.data[idx]["image_filename"]
-        image = [load_image(filename) for filename in image_filename]
+        image = [cv2.imread(filename)[..., ::-1] for filename in image_filename]
 
         sample = {"name": name, "categoryid": categoryid, "image": image}
 
@@ -97,14 +122,18 @@ class ToTensor(object):
         ids = sample["categoryid"]
         images = sample["image"]
 
-        # TODO: process item names
-        # names = torch.from_numpy(names)
+        for i, name in enumerate(names):
+            name = torch.from_numpy(name)
+            name = name.type("torch.FloatTensor")
+            names[i] = name
+
         ids = torch.from_numpy(ids)
+        ids = ids.type("torch.FloatTensor")
+
         for i, image in enumerate(images):
             image = np.transpose(image, (2, 0, 1))
             image = torch.from_numpy(image)
             image = image.type("torch.FloatTensor")
-            # image = image.unsqueeze(0)
             images[i] = image
 
         return {"name": names, "categoryid": ids, "image": images}
@@ -117,16 +146,20 @@ def main():
         Resize(400), ToTensor()
     ]))
 
-    name_set = set()
-    for i in range(len(dataset)):
-        if i % 1000 == 0:
-            print(i)
+    loader = DataLoader(dataset, batch_size=1, shuffle=True)
 
-        names = dataset[i]["name"]
-        for name in names:
-            name_set.add(name)
+    # print(next(iter(loader)))
 
-    print(len(name_set), len(dataset) * 8)  # 72411 138528
+    # name_set = set()
+    # for i in range(len(dataset)):
+    #     if i % 1000 == 0:
+    #         print(i)
+    #
+    #     names = dataset[i]["name"]
+    #     for name in names:
+    #         name_set.add(name)
+    #
+    # print(len(name_set), len(dataset) * 8)  # 72411 138528
 
 
 if __name__ == "__main__":
