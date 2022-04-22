@@ -67,20 +67,23 @@ class PolyvoreDataset(Dataset):
     def __fix_sizes(self):
         for i, outfit in enumerate(self.data):
             names = outfit["name"]
-            for i, name in enumerate(names):
+            for j, name in enumerate(names):
                 if len(name) < 10:  # Item descriptions have a maximum of 10 words.
                     for _ in range(10 - len(name)):
-                        names[i] = np.append(names[i], 0)
+                        names[j] = np.append(names[j], 0)
 
             if len(names) < 8:  # Outfit has a maximum of 8 items
                 for _ in range(8 - len(names)):
                     names.append(np.array([0] * 10))
 
-            # print(np.array(names))
             self.data[i]["name"] = np.array(names)
 
-            # categoryid = outfit["categoryid"]
-            # image = outfit["image_filename"]
+            categoryid = outfit["categoryid"]
+            if len(categoryid) < 8:
+                for _ in range(8 - len(categoryid)):
+                    categoryid = np.append(categoryid, 0)
+
+            self.data[i]["categoryid"] = categoryid
 
     def __len__(self):
         return len(self.data)
@@ -127,19 +130,22 @@ class ToTensor(object):
         ids = sample["categoryid"]
         images = sample["image"]
 
-        for i, name in enumerate(names):
-            name = torch.from_numpy(name)
-            name = name.type("torch.FloatTensor")
-            names[i] = name
+        names = torch.from_numpy(np.array(names))
+        names = names.type("torch.FloatTensor")
 
         ids = torch.from_numpy(ids)
         ids = ids.type("torch.FloatTensor")
+
+        nd_images = np.zeros((8, 3, 400, 400), dtype=int)
 
         for i, image in enumerate(images):
             image = np.transpose(image, (2, 0, 1))
             image = torch.from_numpy(image)
             image = image.type("torch.FloatTensor")
-            images[i] = image
+            nd_images[i] = image
+
+        # images = nd_images
+        images = torch.from_numpy(nd_images)
 
         return {"name": names, "categoryid": ids, "image": images}
 
@@ -151,11 +157,9 @@ def main():
         Resize(400), ToTensor()
     ]))
 
-    print(dataset[0])
+    loader = DataLoader(dataset, batch_size=5, shuffle=True)
 
-    # loader = DataLoader(dataset, batch_size=1, shuffle=True)
-
-    # print(next(iter(loader)))
+    print(next(iter(loader)))
 
     # name_set = set()
     # for i in range(len(dataset)):
