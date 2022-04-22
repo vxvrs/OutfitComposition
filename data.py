@@ -132,17 +132,17 @@ class ToTensor(object):
         images = sample["image"]
 
         names = torch.from_numpy(np.array(names))
-        names = names.type("torch.FloatTensor")
+        # names = names.type(torch.FloatTensor)
 
         ids = torch.from_numpy(ids)
-        ids = ids.type("torch.FloatTensor")
+        # ids = ids.type(torch.FloatTensor)
 
         nd_images = np.zeros((8, 3, 400, 400), dtype=int)
 
         for i, image in enumerate(images):
             image = np.transpose(image, (2, 0, 1))
             image = torch.from_numpy(image)
-            image = image.type("torch.FloatTensor")
+            # image = image.type(torch.FloatTensor)
             nd_images[i] = image
 
         images = torch.from_numpy(nd_images)
