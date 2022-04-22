@@ -5,3 +5,4 @@ polyvore-dataset
 .idea/usage.statistics.xml
 .idea/shelf
 *.iml
+*.pt
