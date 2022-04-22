@@ -1,6 +1,7 @@
 import json
 
 import cv2
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 from torch.utils.data import Dataset, DataLoader
@@ -144,33 +145,25 @@ class ToTensor(object):
             image = image.type("torch.FloatTensor")
             nd_images[i] = image
 
-        # images = nd_images
         images = torch.from_numpy(nd_images)
 
         return {"name": names, "categoryid": ids, "image": images}
 
-
-# TODO: make a normalize class
 
 def main():
     dataset = PolyvoreDataset("polyvore-dataset/train_no_dup.json", transform=transforms.Compose([
         Resize(400), ToTensor()
     ]))
 
-    loader = DataLoader(dataset, batch_size=5, shuffle=True)
+    loader = DataLoader(dataset, batch_size=5, shuffle=True, num_workers=2)
 
-    print(next(iter(loader)))
-
-    # name_set = set()
-    # for i in range(len(dataset)):
-    #     if i % 1000 == 0:
-    #         print(i)
-    #
-    #     names = dataset[i]["name"]
-    #     for name in names:
-    #         name_set.add(name)
-    #
-    # print(len(name_set), len(dataset) * 8)  # 72411 138528
+    batch = next(iter(loader))
+    for item in batch["image"]:
+        print(item.shape)
+        for i, img in enumerate(item):
+            print(i, img)
+            plt.imshow(np.transpose(img, (1, 2, 0)))
+            plt.show()
 
 
 if __name__ == "__main__":
