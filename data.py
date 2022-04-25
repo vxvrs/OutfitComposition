@@ -90,9 +90,25 @@ class PolyvoreDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+
+        # data = self.data[idx]
+        # if len(data) == 1:
+        # name, categoryid, image_filename = list(), list(), list()
+        #
+        # for item in data:
+        #     name.append(item["name"])
+        #     categoryid.append(item["categoryid"])
+        #     image_filename.append(item["image_filename"])
+        #
+        # print(name, categoryid, image_filename)
+
         name = self.data[idx]["name"]
         categoryid = self.data[idx]["categoryid"]
         image_filename = self.data[idx]["image_filename"]
+        # image = list()
+        # for filenames in image_filename:
         image = [cv2.imread(filename)[..., ::-1] for filename in image_filename]
 
         sample = {"name": name, "categoryid": categoryid, "image": image}
@@ -149,6 +165,8 @@ class ToTensor(object):
 
         return {"name": names, "categoryid": ids, "image": images}
 
+
+# Todo: Make a Normalize class (at least for images).
 
 def main():
     dataset = PolyvoreDataset("polyvore-dataset/train_no_dup.json", transform=transforms.Compose([
