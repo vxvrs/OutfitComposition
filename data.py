@@ -50,16 +50,21 @@ class PolyvoreDataset(Dataset):
 
         index = 1
         word_idx = dict()
-        idx_word = dict()
+        idx_word = {0: "UNK"}
         for word, count in name_count.items():
-            if count > 30:
+            if count > 30:  # Cutoff to leave out non-important words
                 word_idx[word] = index
                 idx_word[index] = word
                 index += 1
 
         return word_idx, idx_word
 
+    def __sentence_bow(self, sentence):
+        return np.array([sentence.count(word) for word in self.word_idx.keys()])
+
+    # TODO: Apply Bag of Words to sentences.
     def __convert_names(self):
+        print(self.__sentence_bow(self.data[0]["name"][0]))
         for outfit in self.data:
             new_names = [np.array([self.word_idx[word] for word in name.split() if word in self.word_idx]) for name in
                          outfit["name"]]
@@ -68,14 +73,14 @@ class PolyvoreDataset(Dataset):
     def __fix_sizes(self):
         for i, outfit in enumerate(self.data):
             names = outfit["name"]
-            for j, name in enumerate(names):
-                if len(name) < 10:  # Item descriptions have a maximum of 10 words.
-                    for _ in range(10 - len(name)):
-                        names[j] = np.append(names[j], 0)
-
-            if len(names) < 8:  # Outfit has a maximum of 8 items
-                for _ in range(8 - len(names)):
-                    names.append(np.array([0] * 10))
+            # for j, name in enumerate(names):
+            #     if len(name) < 10:  # Item descriptions have a maximum of 10 words.
+            #         for _ in range(10 - len(name)):
+            #             names[j] = np.append(names[j], 0)
+            #
+            # if len(names) < 8:  # Outfit has a maximum of 8 items
+            #     for _ in range(8 - len(names)):
+            #         names.append(np.array([0] * 10))
 
             self.data[i]["name"] = np.array(names)
 
@@ -105,6 +110,11 @@ class PolyvoreDataset(Dataset):
         # print(name, categoryid, image_filename)
 
         name = self.data[idx]["name"]
+        print(len(self.word_idx))
+        # embeds = torch.nn.Embedding(len(self.word_idx), 5)
+        # name_t = [embeds(torch.tensor(n, dtype=torch.long)) for n in name]
+        # print(name_t,)
+
         categoryid = self.data[idx]["categoryid"]
         image_filename = self.data[idx]["image_filename"]
         # image = list()
@@ -167,11 +177,25 @@ class ToTensor(object):
 
 
 # Todo: Make a Normalize class (at least for images).
+class Normalize(object):
+    def __call__(self, sample):
+        names = sample["name"]
+        ids = sample["categoryid"]
+        images = sample["image"]
+
+        plt.imshow(images[0])
+        plt.show()
+
+        images = [cv2.normalize(img, None, alpha=0.0, beta=1.0, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
+                  for img in images]
+
 
 def main():
     dataset = PolyvoreDataset("polyvore-dataset/train_no_dup.json", transform=transforms.Compose([
-        Resize(400), ToTensor()
+        Normalize()
     ]))
+    dataset[0]
+    return
 
     loader = DataLoader(dataset, batch_size=5, shuffle=True, num_workers=2)
 

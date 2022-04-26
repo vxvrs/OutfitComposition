@@ -1,10 +1,9 @@
-import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as f
-from data import PolyvoreDataset, Resize, ToTensor
 from torchvision import transforms
-import matplotlib.pyplot as plt
+
+from data import PolyvoreDataset, Resize, ToTensor
 
 
 class AutoEncoder(nn.Module):
@@ -30,6 +29,7 @@ class AutoEncoder(nn.Module):
         return x
 
 
+# TODO: Check loss with normalized dataset.
 def main():
     trainset = PolyvoreDataset("polyvore-dataset/train_no_dup.json",
                                transform=transforms.Compose([Resize(400), ToTensor()]))
