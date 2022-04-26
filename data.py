@@ -49,7 +49,7 @@ class PolyvoreDataset(Dataset):
                         name_count[word] += 1
 
         index = 1
-        word_idx = dict()
+        word_idx = {"UNK": 0}
         idx_word = {0: "UNK"}
         for word, count in name_count.items():
             if count > 30:  # Cutoff to leave out non-important words
@@ -60,15 +60,22 @@ class PolyvoreDataset(Dataset):
         return word_idx, idx_word
 
     def __sentence_bow(self, sentence):
-        return np.array([sentence.count(word) for word in self.word_idx.keys()])
+        word_code = [self.word_idx[word] for word in sentence.split(' ') if word in self.word_idx.keys()]
 
-    # TODO: Apply Bag of Words to sentences.
+        empty_word = np.array([0] * len(self.word_idx))
+        for i in word_code:
+            empty_word[i] += 1
+
+        return empty_word
+
     def __convert_names(self):
-        print(self.__sentence_bow(self.data[0]["name"][0]))
         for outfit in self.data:
-            new_names = [np.array([self.word_idx[word] for word in name.split() if word in self.word_idx]) for name in
-                         outfit["name"]]
-            outfit["name"] = new_names
+            outfit["name"] = [self.__sentence_bow(name) for name in outfit["name"]]
+
+        # for outfit in self.data:
+        #     new_names = [np.array([self.word_idx[word] for word in name.split() if word in self.word_idx]) for name in
+        #                  outfit["name"]]
+        #     outfit["name"] = new_names
 
     def __fix_sizes(self):
         for i, outfit in enumerate(self.data):
@@ -78,11 +85,11 @@ class PolyvoreDataset(Dataset):
             #         for _ in range(10 - len(name)):
             #             names[j] = np.append(names[j], 0)
             #
-            # if len(names) < 8:  # Outfit has a maximum of 8 items
-            #     for _ in range(8 - len(names)):
-            #         names.append(np.array([0] * 10))
+            if len(names) < 8:  # Outfit has a maximum of 8 items
+                for _ in range(8 - len(names)):
+                    names.append(np.array([0] * len(self.word_idx.keys())))
 
-            self.data[i]["name"] = np.array(names)
+            self.data[i]["name"] = names
 
             categoryid = outfit["categoryid"]
             if len(categoryid) < 8:
@@ -95,30 +102,10 @@ class PolyvoreDataset(Dataset):
         return len(self.data)
 
     def __getitem__(self, idx):
-        if torch.is_tensor(idx):
-            idx = idx.tolist()
-
-        # data = self.data[idx]
-        # if len(data) == 1:
-        # name, categoryid, image_filename = list(), list(), list()
-        #
-        # for item in data:
-        #     name.append(item["name"])
-        #     categoryid.append(item["categoryid"])
-        #     image_filename.append(item["image_filename"])
-        #
-        # print(name, categoryid, image_filename)
-
         name = self.data[idx]["name"]
-        print(len(self.word_idx))
-        # embeds = torch.nn.Embedding(len(self.word_idx), 5)
-        # name_t = [embeds(torch.tensor(n, dtype=torch.long)) for n in name]
-        # print(name_t,)
 
         categoryid = self.data[idx]["categoryid"]
         image_filename = self.data[idx]["image_filename"]
-        # image = list()
-        # for filenames in image_filename:
         image = [cv2.imread(filename)[..., ::-1] for filename in image_filename]
 
         sample = {"name": name, "categoryid": categoryid, "image": image}
@@ -157,18 +144,15 @@ class ToTensor(object):
         ids = sample["categoryid"]
         images = sample["image"]
 
-        names = torch.from_numpy(np.array(names))
-        # names = names.type(torch.FloatTensor)
+        names = torch.from_numpy(np.stack(names, axis=0))
 
         ids = torch.from_numpy(ids)
-        # ids = ids.type(torch.FloatTensor)
 
-        nd_images = np.zeros((8, 3, 400, 400), dtype=int)
+        nd_images = np.zeros((8, 3, 400, 400), dtype=float)
 
         for i, image in enumerate(images):
             image = np.transpose(image, (2, 0, 1))
             image = torch.from_numpy(image)
-            # image = image.type(torch.FloatTensor)
             nd_images[i] = image
 
         images = torch.from_numpy(nd_images)
@@ -176,34 +160,28 @@ class ToTensor(object):
         return {"name": names, "categoryid": ids, "image": images}
 
 
-# Todo: Make a Normalize class (at least for images).
 class Normalize(object):
     def __call__(self, sample):
         names = sample["name"]
         ids = sample["categoryid"]
         images = sample["image"]
 
-        plt.imshow(images[0])
-        plt.show()
-
         images = [cv2.normalize(img, None, alpha=0.0, beta=1.0, norm_type=cv2.NORM_MINMAX, dtype=cv2.CV_32F)
                   for img in images]
+
+        return {"name": names, "categoryid": ids, "image": images}
 
 
 def main():
     dataset = PolyvoreDataset("polyvore-dataset/train_no_dup.json", transform=transforms.Compose([
-        Normalize()
+        Resize(400), Normalize(), ToTensor()
     ]))
-    dataset[0]
-    return
 
     loader = DataLoader(dataset, batch_size=5, shuffle=True, num_workers=2)
 
     batch = next(iter(loader))
     for item in batch["image"]:
-        print(item.shape)
         for i, img in enumerate(item):
-            print(i, img)
             plt.imshow(np.transpose(img, (1, 2, 0)))
             plt.show()
 
