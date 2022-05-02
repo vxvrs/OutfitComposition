@@ -1,6 +1,3 @@
-import time
-
-import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
@@ -21,14 +18,12 @@ class AutoEncoder(nn.Module):
         self.t_conv1 = nn.ConvTranspose2d(1, 16, 2, stride=2)
         self.t_conv2 = nn.ConvTranspose2d(16, 8, 2, stride=2)
         self.t_conv3 = nn.ConvTranspose2d(8, 3, 2, stride=2)
-        # TODO: Add dense layers to improve embedding.
-        flatten_size = 1 * 50 * 50
-        # self.fc = nn.Linear(flatten_size, flatten_size)
-        # self.t_fc = nn.Linear(flatten_size, flatten_size)
-        self.drop = nn.Dropout(0.2)
 
-        self.flatten = nn.Flatten()
-        self.unflatten = nn.Unflatten(1, (1, 50, 50))
+        # self.fc = nn.Linear(1000, 625)
+        # self.drop = nn.Dropout(0.2)
+        #
+        # self.flatten = nn.Flatten()
+        # self.unflatten = nn.Unflatten(1, (1, 25, 25))
 
     def encoder(self, x):
         x = f.relu(self.conv1(x))
@@ -38,17 +33,12 @@ class AutoEncoder(nn.Module):
         x = f.relu(self.conv3(x))
         x = self.pool(x)
 
-        x = self.flatten(x)
-
-        # x = f.relu(self.fc(x))
-        # x = self.drop(x)
+        # x = self.flatten(x)
 
         return x
 
     def decoder(self, x):
-        # x = f.relu(self.t_fc(x))
-
-        x = self.unflatten(x)
+        # x = self.unflatten(x)
 
         x = f.relu(self.t_conv1(x))
         x = f.relu(self.t_conv2(x))
@@ -60,70 +50,89 @@ class AutoEncoder(nn.Module):
         x = x.type(torch.FloatTensor)
 
         x = self.encoder(x)
-        print("Shape after encoding: ", x.shape)
         x = self.decoder(x)
-        print("Shape after decoding: ", x.shape)
 
         return x
 
 
-def train_epoch():
-    pass
-
-
 def main():
-    main_start = time.time()
-
     trainset = PolyvoreDataset("polyvore-dataset/train_no_dup.json",
+                               transform=transforms.Compose([Resize(400), Normalize(), ToTensor()]))
+    validset = PolyvoreDataset("polyvore-dataset/valid_no_dup.json",
                                transform=transforms.Compose([Resize(400), Normalize(), ToTensor()]))
 
     trainloader = DataLoader(trainset, batch_size=50, shuffle=True, num_workers=1)
 
-    print("Data loaded!", len(trainset))
+    validloader = DataLoader(validset, batch_size=50, shuffle=False, num_workers=1)
+
+    print("Data loaded!", len(trainset), len(validset))
 
     model = AutoEncoder()
+    if torch.cuda.is_available():
+        model = model.cuda()
+
     criterion = nn.L1Loss()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.01)
 
-    # images = list()
-    # for i in range(len(trainset)):
-    #     image = trainset[i]["image"]
-    #     for img in image:
-    #         images.append(img)
-    #
-    # data = [torch.unsqueeze(img, 0) for img in images]
-    # data = torch.cat(data)
-    # print(data.shape)
-
-    n_epochs = 200
+    n_epochs = 5
+    min_valid_loss = np.inf
     for epoch in range(1, n_epochs + 1):
-        epoch_start = time.time()
         train_loss = 0.0
+        model.train()
 
-        # for batch in trainloader:
-        #     images = [img for outfit in batch["image"] for img in outfit]
-
-        for i in range(5):
-            images = [img for img in trainset[i]["image"]]
+        for batch in trainloader:
+            images = [img for outfit in batch["image"] for img in outfit]
             images = torch.from_numpy(np.stack(images, axis=0))
+            if torch.cuda.is_available():
+                images = images.cuda()
 
             optimizer.zero_grad()
             outputs = model(images)
 
-            with torch.no_grad():
-                for j, out in enumerate(outputs):
-                    img = np.transpose(out.detach().numpy(), (1, 2, 0))
-                    plt.imshow(img)
-                    plt.savefig(f"plots/e{epoch}_i{i}_o{j}.png")
-
             loss = criterion(outputs, images.type(torch.FloatTensor))
             loss.backward()
+
             optimizer.step()
-            train_loss += loss.item() * images.size(0)
+            train_loss += loss.item()
 
-        print("Epoch: {} \tTraining Loss: {:.6f} \tTime: {:.2f}".format(epoch, train_loss, time.time() - epoch_start))
+        valid_loss = 0.0
+        model.eval()
+        for batch in validloader:
+            images = [img for outfit in batch["image"] for img in outfit]
+            images = torch.from_numpy(np.stack(images, axis=0))
+            if torch.cuda.is_available():
+                images = images.cuda()
 
-    print("Total time: {:.2f}".format(time.time() - main_start))
+            outputs = model(images)
+            loss = criterion(outputs, images.type(torch.FloatTensor))
+            valid_loss = loss.item()
+
+        print(
+            f"Epoch {epoch} \t\t Training Loss: {train_loss / len(trainloader)} \t\t Validation Loss: {valid_loss / len(validloader)}")
+        if min_valid_loss > valid_loss:
+            print(f"Validation Loss Decreased({min_valid_loss:.6f}--->{valid_loss:.6f}) \t Saving The Model")
+            min_valid_loss = valid_loss
+            torch.save(model.state_dict(), 'models/saved_model.pt')
+
+        # for i in range(5):
+        #     images = [img for img in trainset[i]["image"]]
+        #     images = torch.from_numpy(np.stack(images, axis=0))
+        #
+        #     optimizer.zero_grad()
+        #     outputs = model(images)
+        #
+        #     with torch.no_grad():
+        #         for j, out in enumerate(outputs):
+        #             img = np.transpose(out.detach().numpy(), (1, 2, 0))
+        #             plt.imshow(img)
+        #             plt.savefig(f"plots/e{epoch}_i{i}_o{j}.png")
+        #
+        #     loss = criterion(outputs, images.type(torch.FloatTensor))
+        #     loss.backward()
+        #     optimizer.step()
+        #     train_loss += loss.item() * images.size(0)
+        #
+        #     print("Epoch: {} \tTraining Loss: {:.6f} \tTime: {:.2f}".format(epoch, train_loss, time.time() - epoch_start))
 
 
 if __name__ == "__main__":
