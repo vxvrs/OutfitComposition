@@ -1,6 +1,6 @@
-import torch
 import pandas
-from torch.utils.data import Dataset, DataLoader
+from torch.utils.data import Dataset
+
 
 class config:
     image_path = "./dataset"
@@ -14,12 +14,13 @@ class FarfetchDataset(Dataset):
         return len(self.df)
 
     def __getitem__(self, idx):
-        return self.df.iloc[idx]
+        print(idx)
+        return self.df.loc[idx]
 
 
 def main():
-    dataset = FarfetchDataset("./dataset/")
-    print(dataset[1000]["product_attributes"])
+    dataset = FarfetchDataset("./farfetch-dataset")
+    print(dataset[:2])
 
 
 if __name__ == "__main__":
