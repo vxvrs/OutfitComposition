@@ -1,9 +1,11 @@
 venv
-polyvore-dataset.tar
 polyvore-dataset
+farfetch-dataset
 plots
 .idea/workspace.xml
 .idea/usage.statistics.xml
 .idea/shelf
 *.iml
 *.pt
+*.tar
+*.tar.gz
