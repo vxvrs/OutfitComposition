@@ -9,3 +9,4 @@ plots
 *.pt
 *.tar
 *.tar.gz
+*.parquet
