@@ -35,10 +35,6 @@ def main(parse_args):
         print(train_products.sample(1).iloc[0])
         print("Train / valid / test shapes:", train_products.shape, valid_products.shape, test_products.shape)
 
-    outfits = pd.read_parquet(f"{parse_args.dataset}/manual_outfits.parquet", engine="pyarrow")
-    outfits = add_fitb_queries(outfits, products["product_id"])
-    if parse_args.debug: print(outfits.sample(1).iloc[0])
-
     unique_name = f"_{int(time.time())}" if parse_args.unique_name else ""
     if parse_args.debug: print(unique_name)
 
@@ -46,6 +42,13 @@ def main(parse_args):
         train_products.to_parquet(f"{parse_args.target}/products_train{unique_name}.parquet")
         valid_products.to_parquet(f"{parse_args.target}/products_valid{unique_name}.parquet")
         test_products.to_parquet(f"{parse_args.target}/products_test{unique_name}.parquet")
+
+    outfits = pd.read_parquet(f"{parse_args.dataset}/manual_outfits.parquet", engine="pyarrow")
+    outfits = add_fitb_queries(outfits, products["product_id"])
+    if parse_args.debug: print(outfits.sample(1).iloc[0])
+
+    if not parse_args.debug or args.unique_name:
+        outfits.to_parquet(f"{parse_args.target}/outfits{unique_name}.parquet")
 
     # for i, line in enumerate(sample["name"]):
     #     img = Image.open(sample["image"][i])
@@ -66,8 +69,7 @@ def main(parse_args):
 
 
 if __name__ == "__main__":
-    import argparse
-    import pathlib
+    import argparse, pathlib
 
     parser = argparse.ArgumentParser(description="Split the dataset in training, validation and testing sets and "
                                                  "generate fill-in-the-blank queries from the manual outfits.",
