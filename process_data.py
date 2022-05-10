@@ -7,6 +7,12 @@ from sklearn.model_selection import train_test_split
 
 
 def add_fitb_queries(outfits, product_ids):
+    """
+    This function is used to add fill-in-the-blank queries of the outfits to the Dataframe.
+    :param outfits: Dataframe contain all manual outfits.
+    :param product_ids: All product ids of the items in the dataset.
+    :return: Returns Dataframe with columns incomplete_outfit, missing_product and candidates added.
+    """
     outfits["products_shuffled"] = outfits.apply(lambda row: permutation(row["products"]).tolist(), axis=1)
     outfits["incomplete_outfit"] = outfits.apply(lambda row: row["products_shuffled"][:-1], axis=1)
     outfits["missing_product"] = outfits.apply(lambda row: row["products_shuffled"][-1], axis=1)
@@ -22,9 +28,16 @@ def add_fitb_queries(outfits, product_ids):
     return outfits.drop("products_shuffled", axis=1)
 
 
-def split_train_valid_test(data, test_size=0.3):
+def split_train_valid_test(data, test_size=0.3, valid_size=0.3):
+    """
+    This function is used to split the data into a training, validation and test set.
+    :param data: Data to be split.
+    :param test_size: Size of the test set relative to all data.
+    :param valid_size: Size of the validation set relative to train set.
+    :return: Returns training, validation and test sets.
+    """
     train, test = train_test_split(data, test_size=test_size)
-    train, valid = train_test_split(train, test_size=test_size)
+    train, valid = train_test_split(train, test_size=valid_size)
     return train, valid, test
 
 
@@ -49,23 +62,6 @@ def main(parse_args):
 
     if not parse_args.debug or args.unique_name:
         outfits.to_parquet(f"{parse_args.target}/outfits{unique_name}.parquet")
-
-    # for i, line in enumerate(sample["name"]):
-    #     img = Image.open(sample["image"][i])
-    #     img = preprocess(img).unsqueeze(0)
-    #     token = clip.tokenize(line)
-    #
-    #     with torch.no_grad():
-    #         print(model.encode_image(img).shape, model.encode_text(token).shape, sep='\t\t')
-    #
-    #         logits_per_image, logits_per_text = model(img, token)
-    #         probs = logits_per_image.softmax(dim=-1).cpu().numpy()
-    #
-    #         print("Label probs:", probs)
-
-    # with torch.no_grad():
-    #     img_f = model.encode_image(image)
-    #     print(img_f.shape)
 
 
 if __name__ == "__main__":

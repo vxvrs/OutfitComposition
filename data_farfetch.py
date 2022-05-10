@@ -41,10 +41,17 @@ def image_text_pair(row):
 
 
 class FarfetchDataset(Dataset):
-    def __init__(self, dataframe, tokenizer, preprocess):
+    """
+    Dataset that can be used in combination with Dataloader to load batches.
+    The text is tokenized and images are loaded and preprocessed when needed.
+    The text is truncated to fit the CLIP model and the data is returned as tensors.
+    """
+
+    def __init__(self, dataframe, tokenizer, preprocess, truncate=True):
         self.dataframe = dataframe
         self.tokenizer = tokenizer
         self.preprocess = preprocess
+        self.truncate = truncate
 
     def __len__(self):
         return len(self.dataframe)
@@ -52,7 +59,7 @@ class FarfetchDataset(Dataset):
     def __getitem__(self, idx):
         text, image_path = self.dataframe.iloc[idx]
 
-        tokens = self.tokenizer(text, truncate=True).squeeze(0)
+        tokens = self.tokenizer(text, truncate=self.truncate).squeeze(0)
         with Image.open(image_path) as image:
             processed_image = self.preprocess(image)
 
@@ -63,13 +70,13 @@ def main(parse_args):
     global dataset_path
     dataset_path = parse_args.dataset
 
-    model, preprocess = clip.load("ViT-B/32", jit=False)
+    _, preprocess = clip.load("ViT-B/32", jit=False)
 
     dataset = pd.read_parquet(f"{parse_args.dataset}/products_train.parquet", engine="pyarrow")
     text_image = dataset.iloc[:100].apply(lambda row: image_text_pair(row), axis=1)
 
     test = FarfetchDataset(text_image, clip.tokenize, preprocess)
-    loader = DataLoader(test, batch_size=5)
+    loader = DataLoader(test, batch_size=5, shuffle=True)
     text_batch, image_batch = next(iter(loader))
     print(f"Text: {text_batch.shape}", f"Image: {image_batch.shape}", sep='\n')
 
