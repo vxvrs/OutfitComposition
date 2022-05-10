@@ -56,7 +56,7 @@ class FarfetchDataset(Dataset):
         with Image.open(image_path) as image:
             processed_image = self.preprocess(image)
 
-        return {"text": tokens, "image": processed_image}
+        return tokens, processed_image
 
 
 def main(parse_args):
@@ -65,22 +65,22 @@ def main(parse_args):
 
     model, preprocess = clip.load("ViT-B/32", jit=False)
 
-    dataset = pd.read_parquet(f"{parse_args.dataset}/products_train_1651863895.parquet", engine="pyarrow")
+    dataset = pd.read_parquet(f"{parse_args.dataset}/products_train.parquet", engine="pyarrow")
     text_image = dataset.iloc[:100].apply(lambda row: image_text_pair(row), axis=1)
 
     test = FarfetchDataset(text_image, clip.tokenize, preprocess)
     loader = DataLoader(test, batch_size=5)
-    batch = next(iter(loader))
-    print(batch["text"], batch["text"].shape)
-    print(model.encode_text(batch["text"]).shape,
-          model.encode_image(batch["image"]).shape)
+    text_batch, image_batch = next(iter(loader))
+    print(f"Text: {text_batch.shape}", f"Image: {image_batch.shape}", sep='\n')
 
 
 if __name__ == "__main__":
     import argparse
     import pathlib
 
-    parser = argparse.ArgumentParser()
+    parser = argparse.ArgumentParser(description="Shows how to load a batch using the DataLoader with farfetch a "
+                                                 "Dataset. The text and image sizes from the batch are printed.",
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("-d", "--dataset", type=pathlib.Path, default="./dataset",
                         help="Path of directory where products and manual outfits files are stored.")
     main(parser.parse_args())
