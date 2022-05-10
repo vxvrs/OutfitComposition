@@ -5,7 +5,7 @@ import torch.nn.functional as f
 from torch.utils.data import DataLoader
 from torchvision import transforms
 
-from data import PolyvoreDataset, Resize, ToTensor, Normalize
+from data_polyvore import PolyvoreDataset, Resize, ToTensor, Normalize
 
 
 class AutoEncoder(nn.Module):

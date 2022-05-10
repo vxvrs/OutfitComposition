@@ -1,10 +1,11 @@
+import matplotlib.pyplot as plt
 import numpy as np
 import torch
 import torch.nn as nn
 import torch.nn.functional as f
 from torchvision import transforms
-import matplotlib.pyplot as plt
-from data import PolyvoreDataset, Resize, ToTensor
+
+from data_polyvore import PolyvoreDataset, Resize, ToTensor
 
 
 class Model(nn.Module):
