@@ -68,14 +68,15 @@ class FarfetchDataset(Dataset):
 
 def main(parse_args):
     global dataset_path
-    dataset_path = parse_args.dataset
+    dataset_path = parse_args.product_file.parents[0]
 
     _, preprocess = clip.load("ViT-B/32", jit=False)
 
-    dataset = pd.read_parquet(f"{parse_args.dataset}/products_train.parquet", engine="pyarrow")
+    dataset = pd.read_parquet(parse_args.product_file, engine="pyarrow")
     text_image = dataset.apply(lambda row: text_image_pair(row), axis=1)
-    if parse_args.store:
-        text_image.to_parquet(f"{parse_args.dataset}/text_image.parquet")
+    if parse_args.save:
+        filename = f"{dataset_path}/{parse_args.product_file.stem}_text_image.parquet"
+        text_image.to_parquet(filename)
 
     test = FarfetchDataset(text_image, clip.tokenize, preprocess)
     loader = DataLoader(test, batch_size=5, shuffle=True)
@@ -88,9 +89,11 @@ if __name__ == "__main__":
     import pathlib
 
     parser = argparse.ArgumentParser(description="Shows how to load a batch using the DataLoader with farfetch a "
-                                                 "Dataset. The text and image sizes from the batch are printed.",
+                                                 "Dataset. The text and image sizes from the batch are printed and "
+                                                 "the text image pairs can also be stored.",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("-d", "--dataset", type=pathlib.Path, default="./dataset",
-                        help="Path of directory where products and manual outfits files are stored.")
-    parser.add_argument("--save", action="store_true", help="Store parquet of text image pairs in dataset location.")
+    parser.add_argument("product_file", type=pathlib.Path, help="File that contains the products you want use. Make "
+                                                                "sure the files are in dataset directory.")
+    parser.add_argument("--save", action="store_true",
+                        help="Save parquet file of text image pairs in same directory as the product file.")
     main(parser.parse_args())
