@@ -6,7 +6,7 @@ from torch.utils.data import Dataset, DataLoader
 dataset_path: str
 
 
-def image_text_pair(row):
+def text_image_pair(row):
     """
     This function is used to combine all textual data into one full sentence of a given row from a dataframe containing
     Farfetch products. This new sentence is returned with the image path.
@@ -73,7 +73,9 @@ def main(parse_args):
     _, preprocess = clip.load("ViT-B/32", jit=False)
 
     dataset = pd.read_parquet(f"{parse_args.dataset}/products_train.parquet", engine="pyarrow")
-    text_image = dataset.iloc[:100].apply(lambda row: image_text_pair(row), axis=1)
+    text_image = dataset.apply(lambda row: text_image_pair(row), axis=1)
+    if parse_args.store:
+        text_image.to_parquet(f"{parse_args.dataset}/text_image.parquet")
 
     test = FarfetchDataset(text_image, clip.tokenize, preprocess)
     loader = DataLoader(test, batch_size=5, shuffle=True)
@@ -90,4 +92,5 @@ if __name__ == "__main__":
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("-d", "--dataset", type=pathlib.Path, default="./dataset",
                         help="Path of directory where products and manual outfits files are stored.")
+    parser.add_argument("--save", action="store_true", help="Store parquet of text image pairs in dataset location.")
     main(parser.parse_args())
