@@ -61,12 +61,12 @@ def main(parse_args):
     clip_model, preprocess = clip.load("ViT-B/32", device=device, jit=False)
 
     train_df = pd.read_parquet(f"{data_farfetch.dataset_path}/products_train_text_image.parquet",
-                               engine="pyarrow").sample(100)
+                               engine="pyarrow")
     trainset = data_farfetch.FarfetchDataset(train_df, clip.tokenize, preprocess)
     trainloader = DataLoader(trainset, batch_size=50, shuffle=True, num_workers=1)
 
     valid_df = pd.read_parquet(f"{data_farfetch.dataset_path}/products_test_text_image.parquet",
-                               engine="pyarrow").sample(10)
+                               engine="pyarrow")
     validset = data_farfetch.FarfetchDataset(valid_df, clip.tokenize, preprocess)
     validloader = DataLoader(validset, batch_size=50, shuffle=False, num_workers=1)
 
@@ -78,7 +78,7 @@ def main(parse_args):
     criterion = nn.L1Loss()
     optimizer = torch.optim.Adam(ae_model.parameters(), lr=0.001)
 
-    n_epochs = 5
+    n_epochs = 200
     min_valid_loss = np.inf
     for epoch in range(1, n_epochs + 1):
         train_loss = 0.0
