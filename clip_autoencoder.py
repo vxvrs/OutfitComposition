@@ -39,12 +39,12 @@ class AutoEncoder(nn.Module):
         return x
 
 
-def get_data(batch, clip_model, modal):
+def get_data(device, batch, clip_model, modal):
     text, image = batch
 
     with torch.no_grad():
-        text_embed = clip_model.encode_text(text) if "text" in modal else None
-        image_embed = clip_model.encode_image(image) if "image" in modal else None
+        text_embed = clip_model.encode_text(text.to(device)) if "text" in modal else None
+        image_embed = clip_model.encode_image(image.to(device)) if "image" in modal else None
 
     if text_embed is not None and image_embed is not None:
         data = torch.cat((text_embed, image_embed), 1)
@@ -83,7 +83,7 @@ def main(parse_args):
     for epoch in range(1, n_epochs + 1):
         train_loss = 0.0
         for batch in trainloader:
-            data = get_data(batch, clip_model, parse_args.modal).to(device)
+            data = get_data(device, batch, clip_model, parse_args.modal).to(device)
 
             optimizer.zero_grad()
             outputs = ae_model(data)
@@ -98,7 +98,7 @@ def main(parse_args):
 
         with torch.no_grad():
             for batch in validloader:
-                data = get_data(batch, clip_model, parse_args.modal).to(device)
+                data = get_data(device, batch, clip_model, parse_args.modal).to(device)
 
                 outputs = ae_model(data)
                 loss = criterion(outputs, data)
