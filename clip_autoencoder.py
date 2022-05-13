@@ -3,7 +3,7 @@ import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
-import torch.nn.functional as F
+from torch.nn.functional import relu
 from torch.utils.data import DataLoader
 
 import data_farfetch
@@ -22,14 +22,14 @@ class AutoEncoder(nn.Module):
         self.t_fc1 = nn.Linear(input_size // 2, input_size)
 
     def encoder(self, x):
-        x = F.relu(self.fc1(x))
-        x = F.relu(self.fc2(x))
-        x = F.relu((self.fc3(x)))
+        x = relu(self.fc1(x))
+        x = relu(self.fc2(x))
+        x = relu((self.fc3(x)))
         return x
 
     def decoder(self, x):
-        x = F.relu(self.t_fc3(x))
-        x = F.relu(self.t_fc2(x))
+        x = relu(self.t_fc3(x))
+        x = relu(self.t_fc2(x))
         x = self.t_fc1(x)
         return x
 
@@ -63,12 +63,12 @@ def main(parse_args):
     train_df = pd.read_parquet(f"{data_farfetch.dataset_path}/products_train_text_image.parquet",
                                engine="pyarrow")
     trainset = data_farfetch.FarfetchDataset(train_df, clip.tokenize, preprocess)
-    trainloader = DataLoader(trainset, batch_size=50, shuffle=True, num_workers=1)
+    trainloader = DataLoader(trainset, batch_size=50, shuffle=True)
 
     valid_df = pd.read_parquet(f"{data_farfetch.dataset_path}/products_test_text_image.parquet",
                                engine="pyarrow")
     validset = data_farfetch.FarfetchDataset(valid_df, clip.tokenize, preprocess)
-    validloader = DataLoader(validset, batch_size=50, shuffle=False, num_workers=1)
+    validloader = DataLoader(validset, batch_size=50, shuffle=False)
 
     print("Data Loaded!")
 
