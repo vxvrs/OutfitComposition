@@ -62,18 +62,21 @@ def main(parse_args):
 
     train_df = pd.read_parquet(f"{data_farfetch.dataset_path}/products_train_text_image.parquet",
                                engine="pyarrow")
+    if parse_args.testing: train_df = train_df.sample(100)
     trainset = data_farfetch.FarfetchDataset(train_df, clip.tokenize, preprocess)
     trainloader = DataLoader(trainset, batch_size=50, shuffle=True)
 
     valid_df = pd.read_parquet(f"{data_farfetch.dataset_path}/products_test_text_image.parquet",
                                engine="pyarrow")
+    if parse_args.testing: valid_df = valid_df.sample(30)
     validset = data_farfetch.FarfetchDataset(valid_df, clip.tokenize, preprocess)
     validloader = DataLoader(validset, batch_size=50, shuffle=False)
 
     print("Data Loaded!")
 
     input_size = 1024 if parse_args.modal == "text_image" else 512
-    ae_model = AutoEncoder(input_size=input_size, latent_size=input_size // 16).to(device)
+    ae_model = AutoEncoder(input_size=input_size, latent_size=input_size // 16)
+    ae_model = ae_model.to(device)
     print(ae_model)
     criterion = nn.L1Loss()
     optimizer = torch.optim.Adam(ae_model.parameters(), lr=0.001)
@@ -111,7 +114,7 @@ def main(parse_args):
         if min_valid_loss > valid_loss:
             print(f"Validation Loss Decreased({min_valid_loss:.6f}--->{valid_loss:.6f})")
             min_valid_loss = valid_loss
-            torch.save(ae_model.state_dict(), f"models/ae_model_{parse_args.modal}_{len(trainset)}.pt")
+            torch.save(ae_model, f"models/ae_model_{parse_args.modal}_{len(trainset)}_{len(validset)}.pt")
 
 
 if __name__ == "__main__":
@@ -119,8 +122,10 @@ if __name__ == "__main__":
     import pathlib
 
     parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
-    parser.add_argument("-d", "--dataset", type=pathlib.Path, default="./dataset",
-                        help="Path of directory where products and manual outfits files are stored.")
+    parser.add_argument("dataset", type=pathlib.Path,
+                        help="Directory where products text image processed files are stored.")
     parser.add_argument("-m", "--modal", choices=["text_image", "text", "image"], default="text_image",
                         help="Modalities to use in the network")
+    parser.add_argument("--testing", action="store_true",
+                        help="Use a small portion of the dataset for testing purposes.")
     main(parser.parse_args())
