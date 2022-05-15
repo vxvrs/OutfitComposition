@@ -78,7 +78,7 @@ def main(parse_args):
     criterion = nn.L1Loss()
     optimizer = torch.optim.Adam(ae_model.parameters(), lr=0.001)
 
-    n_epochs = 200
+    n_epochs = 20
     min_valid_loss = np.inf
     for epoch in range(1, n_epochs + 1):
         train_loss = 0.0
