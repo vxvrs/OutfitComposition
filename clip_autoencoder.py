@@ -13,24 +13,24 @@ class AutoEncoder(nn.Module):
     def __init__(self, input_size=1024, latent_size=64):
         super(AutoEncoder, self).__init__()
 
-        self.fc1 = nn.Linear(input_size, input_size // 2)
-        self.fc2 = nn.Linear(input_size // 2, input_size // 8)
-        self.fc3 = nn.Linear(input_size // 8, latent_size)
+        self.l1 = nn.Linear(input_size, input_size // 2)
+        self.l2 = nn.Linear(input_size // 2, input_size // 8)
+        self.l3 = nn.Linear(input_size // 8, latent_size)
 
-        self.t_fc3 = nn.Linear(latent_size, input_size // 8)
-        self.t_fc2 = nn.Linear(input_size // 8, input_size // 2)
-        self.t_fc1 = nn.Linear(input_size // 2, input_size)
+        self.l4 = nn.Linear(latent_size, input_size // 8)
+        self.l5 = nn.Linear(input_size // 8, input_size // 2)
+        self.l6 = nn.Linear(input_size // 2, input_size)
 
     def encoder(self, x):
-        x = relu(self.fc1(x))
-        x = relu(self.fc2(x))
-        x = relu((self.fc3(x)))
+        x = relu(self.l1(x))
+        x = relu(self.l2(x))
+        x = relu((self.l3(x)))
         return x
 
     def decoder(self, x):
-        x = relu(self.t_fc3(x))
-        x = relu(self.t_fc2(x))
-        x = self.t_fc1(x)
+        x = relu(self.l4(x))
+        x = relu(self.l5(x))
+        x = self.l6(x)
         return x
 
     def forward(self, x):
@@ -83,7 +83,8 @@ def main(parse_args):
     for epoch in range(1, n_epochs + 1):
         train_loss = 0.0
         for batch in trainloader:
-            data = get_data(device, batch, clip_model, parse_args.modal).to(device)
+            data = get_data(device, batch, clip_model, parse_args.modal).type(torch.FloatTensor)
+            data = data.to(device)
 
             optimizer.zero_grad()
             outputs = ae_model(data)
@@ -98,7 +99,8 @@ def main(parse_args):
 
         with torch.no_grad():
             for batch in validloader:
-                data = get_data(device, batch, clip_model, parse_args.modal).to(device)
+                data = get_data(device, batch, clip_model, parse_args.modal).type(torch.FloatTensor)
+                data = data.to(device)
 
                 outputs = ae_model(data)
                 loss = criterion(outputs, data)
