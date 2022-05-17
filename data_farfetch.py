@@ -37,7 +37,7 @@ def text_image_pair(row):
 
     image_path = f"{dataset_path}/images/{row['product_image_path']}"
 
-    return pd.Series([text, image_path], index=["item_description", "image_path"])
+    return pd.Series([row["product_id"], text, image_path], index=["product_id", "item_description", "image_path"])
 
 
 class FarfetchDataset(Dataset):
@@ -57,13 +57,13 @@ class FarfetchDataset(Dataset):
         return len(self.dataframe)
 
     def __getitem__(self, idx):
-        text, image_path = self.dataframe.iloc[idx]
+        id, text, image_path = self.dataframe.iloc[idx]
 
         tokens = self.tokenizer(text, truncate=self.truncate).squeeze(0)
         with Image.open(image_path) as image:
             processed_image = self.preprocess(image)
 
-        return tokens, processed_image
+        return id, tokens, processed_image
 
 
 def main(parse_args):
@@ -73,6 +73,7 @@ def main(parse_args):
     _, preprocess = clip.load("ViT-B/32", jit=False)
 
     dataset = pd.read_parquet(parse_args.product_file, engine="pyarrow")
+    if not parse_args.save: dataset = dataset.sample(20)
     text_image = dataset.apply(lambda row: text_image_pair(row), axis=1)
     if parse_args.save:
         filename = f"{dataset_path}/{parse_args.product_file.stem}_text_image.parquet"
@@ -80,7 +81,7 @@ def main(parse_args):
 
     test = FarfetchDataset(text_image, clip.tokenize, preprocess)
     loader = DataLoader(test, batch_size=5, shuffle=True)
-    text_batch, image_batch = next(iter(loader))
+    _, text_batch, image_batch = next(iter(loader))
     print(f"Text: {text_batch.shape}", f"Image: {image_batch.shape}", sep='\n')
 
 
