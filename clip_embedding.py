@@ -4,7 +4,7 @@ import pandas as pd
 
 """
 Plan de campagne: write a class for embedding. 
-All products text and/or images need to be converted for using the encoder (possibly in class or preprocessed).
+All products text and/or images need to be converted for using the encoder (preprocessed).
 Function for encoding products in outfit and mean of products is outfit encoding (possibly changed).
 Item retrieval can be done by embedding remaining products in outfit (mean) and then making new outfit points with each
 possible outfit combination and look at possible outfit compared to other items. 
@@ -16,6 +16,7 @@ Results from retrieval are stored to file outside of class.
 class OutfitEmbedding:
     def __init__(self, ae_model, products, outfits):
         self.ae_model = ae_model
+        self.encoder = ae_model.encoder
         self.products = products
         self.outfits = outfits
 
@@ -25,12 +26,15 @@ def main(parse_args):
 
     ae_model = torch.load(parse_args.model, map_location=torch.device(device))
     ae_model.eval()
-    print(ae_model)
+    print(parse_args.modal, ae_model)
 
-    products = pd.read_parquet(f"{parse_args.dataset}/products_text_image.parquet")
+    products = pd.read_parquet(f"{parse_args.dataset}/products_text_image.parquet").sample(4)
+    print(products)
+
     outfits = pd.read_parquet(f"{parse_args.dataset}/outfits.parquet")
 
-    print(products, outfits, sep='\n')
+    embed = OutfitEmbedding(ae_model, products, outfits)
+    print(embed.encoder)
 
 
 if __name__ == "__main__":
