@@ -77,7 +77,7 @@ def main(parse_args):
     input_size = 1024 if parse_args.modal == "text_image" else 512
     ae_model = AutoEncoder(input_size=input_size, latent_size=input_size // 16)
     ae_model = ae_model.to(device)
-    print(ae_model)
+    print(parse_args.modal, ae_model)
     criterion = nn.L1Loss()
     optimizer = torch.optim.Adam(ae_model.parameters(), lr=0.001)
 
