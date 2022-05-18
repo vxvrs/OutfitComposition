@@ -40,15 +40,15 @@ def main(parse_args):
     if parse_args.debug: print(unique_name)
 
     if not parse_args.debug or args.unique_name:
-        train_products.to_parquet(f"{parse_args.target}/products_train{unique_name}.parquet")
-        test_products.to_parquet(f"{parse_args.target}/products_test{unique_name}.parquet")
+        train_products.to_parquet(f"{parse_args.dataset}/products_train{unique_name}.parquet")
+        test_products.to_parquet(f"{parse_args.dataset}/products_test{unique_name}.parquet")
 
     outfits = pd.read_parquet(f"{parse_args.dataset}/manual_outfits.parquet", engine="pyarrow")
     outfits = add_fitb_queries(outfits, products["product_id"])
     if parse_args.debug: print(outfits.sample(1).iloc[0])
 
     if not parse_args.debug or args.unique_name:
-        outfits.to_parquet(f"{parse_args.target}/outfits{unique_name}.parquet")
+        outfits.to_parquet(f"{parse_args.dataset}/outfits{unique_name}.parquet")
 
 
 if __name__ == "__main__":
@@ -58,10 +58,9 @@ if __name__ == "__main__":
                                                  "generate fill-in-the-blank queries from the manual outfits.",
                                      formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("dataset", type=pathlib.Path,
-                        help="Path of directory where products and manual outfits files are stored.")
+                        help="Path of directory where products and manual outfits files are stored. This will also be "
+                             "the target directory to store files.")
     parser.add_argument("--unique-name", action="store_true", help="Store the files generated with unique names.")
-    parser.add_argument("-t", "--target", type=pathlib.Path, default=".",
-                        help="Path of target directory to store files.")
     parser.add_argument("--debug", action="store_true",
                         help="No files will be stored and additional information is printed used for debugging. "
                              "Files are stored if unique-names flag is set.")
