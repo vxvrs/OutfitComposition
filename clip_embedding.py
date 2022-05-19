@@ -1,11 +1,13 @@
 import clip
 import pandas as pd
+import torch
 
 import data_farfetch
 
 
 class OutfitEmbeddingCLIP:
     def __init__(self, products, modal, device="cpu"):
+        self.device = device
         self.model, self.preprocess = clip.load("ViT-B/32", device=device, jit=False)
         self.dataset = data_farfetch.FarfetchDataset(products, clip.tokenize, self.preprocess)
         self.products = products
@@ -18,10 +20,15 @@ class OutfitEmbeddingCLIP:
     def embed(self, product_id):
         row = self.get_product(product_id)
         _, text, image = self.dataset.get_product(product_id)
+        text = text.unsqueeze(0)
+        image = image.unsqueeze(0)
         print(text, image, sep='\n')
         # print(self.products.index[self.products["product_id"] == product_id].to_list())
 
-        # text_encoding = self.model.encode_text()
+        with torch.no_grad():
+            text_encoding = self.model.encode_text(text.to(self.device))
+            image_encoding = self.model.encode_image(image.to(self.device))
+        print(text_encoding, image_encoding, sep='\n')
 
 
 def main(parse_args):
@@ -31,8 +38,8 @@ def main(parse_args):
     outfits = pd.read_parquet(f"{parse_args.dataset}/outfits.parquet", engine="pyarrow")
     print(products, outfits, sep='\n')
 
-    embed = OutfitEmbeddingCLIP(products, parse_args.modal)
-    # print(embed.dataset.getdata(16281736))
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    embed = OutfitEmbeddingCLIP(products, parse_args.modal, device=device)
     embed.embed(16281736)
 
 
