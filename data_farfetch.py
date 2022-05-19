@@ -65,13 +65,14 @@ class FarfetchDataset(Dataset):
 
     def __getitem__(self, idx):
         id, text, image_path = self.dataframe.iloc[idx]
-
-        return self.__process_row(id, text, image_path)
+        _, text, image_path = self.__process_row(id, text, image_path)
+        return text, image_path
 
     def get_product(self, product_id):
         row = self.dataframe.loc[self.dataframe["product_id"] == product_id]
         product_id, text, image_path = row.iloc[0]
         return self.__process_row(product_id, text, image_path)
+
 
 def main(parse_args):
     global dataset_path

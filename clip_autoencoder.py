@@ -40,7 +40,7 @@ class AutoEncoder(nn.Module):
 
 
 def get_data(device, batch, clip_model, modal):
-    _, text, image = batch
+    text, image = batch
 
     with torch.no_grad():
         text_embed = clip_model.encode_text(text.to(device)) if "text" in modal else None
