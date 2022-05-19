@@ -17,6 +17,8 @@ class OutfitEmbeddingCLIP:
 
     def embed(self, product_id):
         row = self.get_product(product_id)
+        _, text, image = self.dataset.get_product(product_id)
+        print(text, image, sep='\n')
         # print(self.products.index[self.products["product_id"] == product_id].to_list())
 
         # text_encoding = self.model.encode_text()
@@ -29,9 +31,8 @@ def main(parse_args):
     outfits = pd.read_parquet(f"{parse_args.dataset}/outfits.parquet", engine="pyarrow")
     print(products, outfits, sep='\n')
 
-    print(products.loc[products["product_id"] == 16281736])
     embed = OutfitEmbeddingCLIP(products, parse_args.modal)
-    print(embed.dataset.getdata(16281736))
+    # print(embed.dataset.getdata(16281736))
     embed.embed(16281736)
 
 
