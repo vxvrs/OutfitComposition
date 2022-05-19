@@ -1,5 +1,6 @@
 import pandas as pd
 import torch
+from clip_autoencoder import AutoEncoder
 
 """
 Plan de campagne: write a class for embedding. 
