@@ -56,15 +56,22 @@ class FarfetchDataset(Dataset):
     def __len__(self):
         return len(self.dataframe)
 
-    def __getitem__(self, idx):
-        id, text, image_path = self.dataframe.iloc[idx]
-
+    def __process_row(self, product_id, text, image_path):
         tokens = self.tokenizer(text, truncate=self.truncate).squeeze(0)
         with Image.open(image_path) as image:
             processed_image = self.preprocess(image)
 
         return id, tokens, processed_image
 
+    def __getitem__(self, idx):
+        id, text, image_path = self.dataframe.iloc[idx]
+
+        return self.__process_row(id, text, image_path)
+
+    def get_product(self, product_id):
+        row = self.dataframe.loc[self.dataframe["product_id"] == product_id]
+        product_id, text, image_path = row.iloc[0]
+        return self.__process_row(product_id, text, image_path)
 
 def main(parse_args):
     global dataset_path
