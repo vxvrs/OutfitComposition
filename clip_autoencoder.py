@@ -70,7 +70,7 @@ def main(parse_args):
                                engine="pyarrow")
     if parse_args.testing: valid_df = valid_df.sample(30)
     validset = data_farfetch.FarfetchDataset(valid_df, clip.tokenize, preprocess)
-    validloader = DataLoader(validset, batch_size=50, shuffle=False)
+    validloader = DataLoader(validset, batch_size=100, shuffle=False)
 
     print("Data Loaded!")
 
