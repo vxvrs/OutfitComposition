@@ -1,4 +1,5 @@
 import clip
+import numpy as np
 import pandas as pd
 import torch
 
@@ -11,8 +12,11 @@ class OutfitEmbeddingCLIP:
         self.model, self.preprocess = clip.load("ViT-B/32", device=device, jit=False)
         self.dataset = data_farfetch.FarfetchDataset(products, clip.tokenize, self.preprocess)
         self.products = products
+        self.outfits = outfits
         self.modal = modal
+
         self.embedding = dict()
+        self.setup_embedding()
 
     def get_product(self, product_id):
         return self.products.loc[self.products["product_id"] == product_id]
@@ -35,7 +39,10 @@ class OutfitEmbeddingCLIP:
         return encoding.squeeze(0)
 
     def setup_embedding(self):
-        pass
+        for product_id in self.products["product_id"]:
+            self.embedding[product_id] = self.embed(product_id)
+
+        np.save("embedding.npy", self.embedding)
 
 
 def main(parse_args):
