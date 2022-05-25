@@ -29,7 +29,7 @@ def main(parse_args):
     print(
         f"Lengths:\noutfit_pairs: {len(outfit_pairs)}\toutfit_pairs_small: {len(outfit_pairs_small)}\trandom_pairs: {len(random_pairs)}")
 
-    pairs = {"outfit": outfit_pairs_small, "random": random_pairs}
+    pairs = {"outfit": set(outfit_pairs_small), "random": random_pairs}
     np.save(f"{parse_args.dataset}/pairs.npy", pairs)
 
 
