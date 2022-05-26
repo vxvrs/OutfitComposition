@@ -46,18 +46,22 @@ class SiameseNetwork(nn.Module):
         self.l1 = nn.Linear(input_size, input_size // 2)
         self.l2 = nn.Linear(input_size // 2, input_size // 4)
         self.l3 = nn.Linear(input_size // 4, input_size // 8)
-        self.out = nn.Linear(input_size // 8, 1)
 
-    def single_forward(self, x):
+        concat_size = input_size * 2 // 8
+        self.l4 = nn.Linear(concat_size, concat_size // 2)
+        self.l5 = nn.Linear(concat_size // 2, concat_size // 4)
+        self.l6 = nn.Linear(concat_size // 4, concat_size // 8)
+        self.out = nn.Linear(concat_size // 8, 1)
+
+    def encoder(self, x):
         x = relu(self.l1(x))
         x = relu(self.l2(x))
-        x = relu(self.l3(x))
-        x = torch.sigmoid(x)
+        x = self.l3(x)
         return x
 
     def forward(self, x1, x2):
-        x1 = self.single_forward(x1)
-        x2 = self.single_forward(x2)
+        x1 = self.encoder(x1)
+        x2 = self.encoder(x2)
         return x1, x2
 
 
@@ -79,6 +83,8 @@ def main(parse_args):
 
     model = SiameseNetwork()
     print(model)
+
+    batch
 
     # for batch in loader:
     #     pid, txt, img, lbl = batch
