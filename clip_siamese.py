@@ -36,7 +36,7 @@ class ProductPairs(Dataset):
         product_id2, text2, image2 = self.__process_row(row2)
 
         return torch.tensor([product_id1, product_id2]), torch.stack((text1, text2)), torch.stack(
-            (image1, image2)), label
+            (image1, image2)), torch.tensor([label]).type(torch.FloatTensor)
 
 
 class SiameseNetwork(nn.Module):
@@ -62,7 +62,27 @@ class SiameseNetwork(nn.Module):
     def forward(self, x1, x2):
         x1 = self.encoder(x1)
         x2 = self.encoder(x2)
-        return x1, x2
+
+        x = torch.cat((x1, x2), 1)
+        x = relu(self.l4(x))
+        x = relu(self.l5(x))
+        x = relu(self.l6(x))
+        x = torch.sigmoid(self.out(x))
+
+        return x
+
+
+def get_data(device, clip_model, modal, text, image):
+    with torch.no_grad():
+        text_embed = clip_model.encode_text(text.to(device)) if "text" in modal else None
+        image_embed = clip_model.encode_image(image.to(device)) if "image" in modal else None
+
+    if text_embed is not None and image_embed is not None:
+        data = torch.cat((text_embed, image_embed), 1)
+    else:
+        data = text_embed if text_embed is not None else image_embed
+
+    return data.to(device)
 
 
 def main(parse_args):
@@ -70,32 +90,73 @@ def main(parse_args):
     clip_model, preprocess = clip.load("ViT-B/32", device=device, jit=False)
 
     pairs = np.load(f"{parse_args.dataset}/pairs.npy", allow_pickle=True).item()
-    # all_pairs = list(pairs["outfit"] | pairs["random"])
-    all_pairs = list()
-    for outfit, random in zip(pairs["outfit"], pairs["random"]):
-        all_pairs.append((outfit[0], outfit[1], 1))
-        all_pairs.append((random[0], random[1], 0))
+    print(len(pairs["train"]), len(pairs["test"]))
 
     products = pd.read_parquet(f"{parse_args.dataset}/products_text_image.parquet", engine="pyarrow")
-    dataset = ProductPairs(products, all_pairs, clip.tokenize, preprocess)
+    train_set = ProductPairs(products, pairs["train"], clip.tokenize, preprocess)
+    valid_set = ProductPairs(products, pairs["test"], clip.tokenize, preprocess)
 
-    loader = DataLoader(dataset, batch_size=5, shuffle=True)
+    train_loader = DataLoader(train_set, batch_size=50, shuffle=True)
+    valid_loader = DataLoader(valid_set, batch_size=50, shuffle=False)
 
-    model = SiameseNetwork()
-    print(model)
+    input_size = 1024 if parse_args.modal == "text_image" else 512
+    model = SiameseNetwork(input_size)
+    print(parse_args.modal, model)
+    criterion = nn.BCELoss()
+    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-    batch
+    num_epochs = 20
+    min_valid_loss = np.inf
+    for epoch in range(1, num_epochs + 1):
+        train_loss = 0.0
+        for batch in train_loader:
+            pid, text, image, label = batch
 
-    # for batch in loader:
-    #     pid, txt, img, lbl = batch
-    #     print(pid, lbl)
-    #     break
+            text1, text2 = torch.unbind(text, 1)
+            image1, image2 = torch.unbind(image, 1)
+
+            data1 = get_data(device, clip_model, parse_args.modal, text1, image1)
+            data2 = get_data(device, clip_model, parse_args.modal, text2, image2)
+
+            optimizer.zero_grad()
+            output = model(data1, data2)
+
+            loss = criterion(output, label)
+            loss.backward()
+
+            optimizer.step()
+            train_loss += loss.item()
+
+        valid_loss = 0.0
+        with torch.no_grad():
+            for batch in valid_loader:
+                pid, text, image, label = batch
+
+                text1, text2 = torch.unbind(text, 1)
+                image1, image2 = torch.unbind(image, 1)
+
+                data1 = get_data(device, clip_model, parse_args.modal, text1, image1)
+                data2 = get_data(device, clip_model, parse_args.modal, text2, image2)
+
+                output = model(data1, data2)
+                loss = criterion(output, label)
+                valid_loss += loss.item()
+
+        print(f"Epoch {epoch} \t Training Loss: {train_loss} \t Validation Loss: {valid_loss}")
+
+        if min_valid_loss > valid_loss:
+            print(f"Validation Loss Decreased({min_valid_loss:.6f}--->{valid_loss:.6f})")
+            min_valid_loss = valid_loss
+            torch.save(model, f"models/sm_model_{parse_args.modal}_{len(train_set)}_{len(valid_set)}.pt")
 
 
 if __name__ == "__main__":
     import argparse
     import pathlib
 
-    parser = argparse.ArgumentParser()
-    parser.add_argument("dataset", type=pathlib.Path)
+    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser.add_argument("dataset", type=pathlib.Path,
+                        help="Directory where products and pairs files are stored.")
+    parser.add_argument("-m", "--modal", choices=["text_image", "text", "image"], default="text_image",
+                        help="Modalities to use in the network")
     main(parser.parse_args())
