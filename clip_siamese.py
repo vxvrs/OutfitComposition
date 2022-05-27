@@ -82,6 +82,8 @@ def get_data(device, clip_model, modal, text, image):
     else:
         data = text_embed if text_embed is not None else image_embed
 
+    data = data.type(torch.FloatTensor)
+
     return data.to(device)
 
 
