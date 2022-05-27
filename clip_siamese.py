@@ -106,7 +106,7 @@ def main(parse_args):
     criterion = nn.BCELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-    num_epochs = 20
+    num_epochs = 10
     min_valid_loss = np.inf
     for epoch in range(1, num_epochs + 1):
         train_loss = 0.0
