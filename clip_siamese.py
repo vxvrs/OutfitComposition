@@ -98,8 +98,8 @@ def main(parse_args):
     train_set = ProductPairs(products, pairs["train"], clip.tokenize, preprocess)
     valid_set = ProductPairs(products, pairs["test"], clip.tokenize, preprocess)
 
-    train_loader = DataLoader(train_set, batch_size=100, shuffle=True)
-    valid_loader = DataLoader(valid_set, batch_size=100, shuffle=False)
+    train_loader = DataLoader(train_set, batch_size=5000, shuffle=True)
+    valid_loader = DataLoader(valid_set, batch_size=5000, shuffle=False)
 
     input_size = 1024 if parse_args.modal == "text_image" else 512
     model = SiameseNetwork(input_size)
