@@ -114,6 +114,7 @@ def main(parse_args):
         train_loss = 0.0
         for batch in train_loader:
             pid, text, image, label = batch
+            label = label.to(device)
 
             text1, text2 = torch.unbind(text, 1)
             image1, image2 = torch.unbind(image, 1)
