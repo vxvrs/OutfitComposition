@@ -101,6 +101,7 @@ def main(parse_args):
 
     input_size = 1024 if parse_args.modal == "text_image" else 512
     model = SiameseNetwork(input_size)
+    model = model.to(device)
     print(parse_args.modal, model)
     criterion = nn.BCELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
