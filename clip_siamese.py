@@ -135,6 +135,7 @@ def main(parse_args):
         with torch.no_grad():
             for batch in valid_loader:
                 pid, text, image, label = batch
+                label = label.to(device)
 
                 text1, text2 = torch.unbind(text, 1)
                 image1, image2 = torch.unbind(image, 1)
