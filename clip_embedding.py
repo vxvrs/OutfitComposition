@@ -72,22 +72,32 @@ def main(parse_args):
     data_farfetch.dataset_path = parse_args.dataset
 
     products = pd.read_parquet(f"{parse_args.dataset}/products_text_image.parquet", engine="pyarrow")
-    if parse_args.testing: products = products.sample(100)
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     embed = OutfitEmbeddingCLIP(products, parse_args.modal, device=device)
 
     outfits = pd.read_parquet(f"{parse_args.dataset}/outfits.parquet", engine="pyarrow")
 
+    missing_product = outfits[["outfit_id", "missing_product"]]
+    missing_product.to_csv(f"{parse_args.dataset}/missing_product.csv", index=False)
+
+    predicted_product = pd.DataFrame(columns=["outfit_id", "predicted_product"])
+
     recip_ranks = list()
-    for row in outfits[["incomplete_outfit", "candidates", "missing_product"]].iloc:
-        incomplete_outfit, candidates, missing_product = row
+    for row in outfits[["outfit_id", "incomplete_outfit", "candidates", "missing_product"]].iloc:
+        outfit_id, incomplete_outfit, candidates, missing_product = row
         ranking = embed.fitb(incomplete_outfit, candidates)
+        predicted_id, _ = ranking[0]
+
+        new_row = pd.DataFrame.from_dict({"outfit_id": [outfit_id], "predicted_product": [predicted_id]})
+        predicted_product = pd.concat([predicted_product, new_row], ignore_index=True)
 
         r_rank = reciprocal_rank(missing_product, [r for r, _ in ranking])
         recip_ranks.append(r_rank)
+        print("Reciprocal rank:", r_rank)
 
-    print(np.mean(recip_ranks))
+    print("Mean reciprocal rank:", np.mean(recip_ranks))
+    predicted_product.to_csv(f"{parse_args.dataset}/predicted_product.csv", index=False)
 
     """
     Outfit retrieval FITB
@@ -105,5 +115,4 @@ if __name__ == "__main__":
     parser.add_argument("dataset", type=pathlib.Path, help="Directory containing outfits and products files.")
     parser.add_argument("-m", "--modal", choices=["text_image", "text", "image"], default="text_image",
                         help="Modalities to use in the network")
-    parser.add_argument("--testing", action="store_true")
     main(parser.parse_args())
