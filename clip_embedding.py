@@ -97,7 +97,7 @@ def main(parse_args):
         print("Reciprocal rank:", r_rank)
 
     print("Mean reciprocal rank:", np.mean(recip_ranks))
-    predicted_product.to_csv(f"{parse_args.dataset}/predicted_product.csv", index=False)
+    predicted_product.to_csv(f"{parse_args.dataset}/predicted_product_{parse_args.modal}.csv", index=False)
 
 
 if __name__ == "__main__":
