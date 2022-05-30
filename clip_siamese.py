@@ -96,7 +96,8 @@ def main(parse_args):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     clip_model, preprocess = clip.load("ViT-B/32", device=device, jit=False)
 
-    pairs = np.load(f"{parse_args.dataset}/pairs.npy", allow_pickle=True).item()
+    pairs = np.load(f"{parse_args.dataset}/pairs.npy", allow_pickle=True)
+    pairs: dict = pairs.item()
     print(len(pairs["train"]), len(pairs["test"]))
 
     products = pd.read_parquet(f"{parse_args.dataset}/products_text_image.parquet", engine="pyarrow")
