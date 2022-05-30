@@ -99,13 +99,6 @@ def main(parse_args):
     print("Mean reciprocal rank:", np.mean(recip_ranks))
     predicted_product.to_csv(f"{parse_args.dataset}/predicted_product.csv", index=False)
 
-    """
-    Outfit retrieval FITB
-    - items without options as outfit embedding to compare with the options of fitb
-    - look up outfit embeddings with items from fitb and compare those with options (products have to be already known)
-      variation maybe possible with look at similar outfits
-    """
-
 
 if __name__ == "__main__":
     import argparse
