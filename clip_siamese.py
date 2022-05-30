@@ -152,7 +152,7 @@ def main(parse_args):
         if min_valid_loss > valid_loss:
             print(f"Validation Loss Decreased({min_valid_loss:.6f}--->{valid_loss:.6f})")
             min_valid_loss = valid_loss
-            torch.save(model, f"models/sm_model_{parse_args.modal}_{len(train_set)}_{len(valid_set)}.pt")
+            torch.save(model, f"models/sm_model_{parse_args.modal}_e{epoch}_{len(train_set)}_{len(valid_set)}.pt")
 
 
 if __name__ == "__main__":
