@@ -1,3 +1,5 @@
+import sys
+
 import clip
 import numpy as np
 import pandas as pd
@@ -88,6 +90,9 @@ def get_data(device, clip_model, modal, text, image):
 
 
 def main(parse_args):
+    log_file = open(f"{parse_args.modal}.log", 'w')
+    sys.stdout = log_file
+
     device = "cuda" if torch.cuda.is_available() else "cpu"
     clip_model, preprocess = clip.load("ViT-B/32", device=device, jit=False)
 
@@ -153,6 +158,8 @@ def main(parse_args):
             print(f"Validation Loss Decreased({min_valid_loss:.6f}--->{valid_loss:.6f})")
             min_valid_loss = valid_loss
             torch.save(model, f"models/sm_model_{parse_args.modal}_e{epoch}_{len(train_set)}_{len(valid_set)}.pt")
+
+    log_file.close()
 
 
 if __name__ == "__main__":
