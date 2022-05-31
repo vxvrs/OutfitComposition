@@ -1,8 +1,11 @@
 import random
 from itertools import combinations
 
+import clip
 import numpy as np
 import pandas as pd
+import torch
+from PIL import Image
 from sklearn.model_selection import train_test_split
 
 
@@ -13,8 +16,8 @@ def main(parse_args):
 
     outfit_pairs = set()
 
-    for products, _ in outfits.iloc:
-        outfit_pairs.update([(x1, x2, 1) for x1, x2 in combinations(products, 2)])
+    for prods, _ in outfits.iloc:
+        outfit_pairs.update([(x1, x2, 1) for x1, x2 in combinations(prods, 2)])
 
     outfit_pairs_small = random.sample(outfit_pairs, parse_args.size) if not parse_args.full_size else outfit_pairs
 
@@ -33,10 +36,31 @@ def main(parse_args):
     outfit_train, outfit_test = train_test_split(list(outfit_pairs_small), test_size=0.3)
     random_train, random_test = train_test_split(list(random_pairs), test_size=0.3)
 
-    print(f"Train length: {len(outfit_train + random_train)}\t Test length: {len(outfit_test + random_test)}")
+    train_pairs = outfit_train + random_train
+    test_pairs = outfit_test + random_test
 
-    pairs = {"train": outfit_train + random_train, "test": outfit_test + random_test}
+    print(f"Train length: {len(train_pairs)}\t Test length: {len(test_pairs)}")
+
+    pairs = {"train": train_pairs, "test": test_pairs}
     np.save(f"{parse_args.dataset}/pairs.npy", pairs)
+
+    device = "cuda" if torch.cuda.is_available() else "cpu"
+    _, preprocess = clip.load("ViT-B/32", device=device, jit=False)
+
+    products_txt_img = pd.read_parquet(f"{parse_args.dataset}/products_text_image.parquet", engine="pyarrow")
+
+    processed_ids = dict()
+    for product_id, text, image_path in products_txt_img.iloc:
+        tokens = clip.tokenize(text, truncate=True).squeeze(0)
+        with Image.open(image_path) as img_file:
+            image = preprocess(img_file)
+
+        processed_ids[product_id] = (tokens, image)
+
+    print(len(processed_ids.keys()))
+    np.save(f"{parse_args.dataset}/processed_ids.npy", processed_ids)
+
+    print(np.load(f"{parse_args.dataset}/processed_ids.npy", allow_pickle=True))
 
 
 if __name__ == "__main__":
