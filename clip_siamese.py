@@ -11,6 +11,7 @@ from torch.utils.data import Dataset, DataLoader
 
 
 class ProductPairs(Dataset):
+    # TODO: Remove clip tokenizing, preprocessing and use product_ids dictionary for lookup.
     def __init__(self, products, pairs, tokenizer, preprocess):
         self.products = products
         self.pairs = pairs
@@ -42,6 +43,7 @@ class ProductPairs(Dataset):
 
 
 class SiameseNetwork(nn.Module):
+    # TODO: Remove "funnel" for use of contrastive loss
     def __init__(self, input_size=1024):
         super(SiameseNetwork, self).__init__()
 
@@ -111,6 +113,7 @@ def main(parse_args):
     model = SiameseNetwork(input_size)
     model = model.to(device)
     print(parse_args.modal, model)
+    # TODO: Implement and use contrastive loss instead of cross entropy.
     criterion = nn.BCELoss()
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
