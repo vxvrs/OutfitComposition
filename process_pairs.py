@@ -60,7 +60,7 @@ def main(parse_args):
     print(len(processed_ids.keys()))
     np.save(f"{parse_args.dataset}/processed_ids.npy", processed_ids)
 
-    print(np.load(f"{parse_args.dataset}/processed_ids.npy", allow_pickle=True))
+    print("Finished processing, stored files.")
 
 
 if __name__ == "__main__":
