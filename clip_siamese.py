@@ -6,7 +6,7 @@ import pandas as pd
 import torch
 import torch.nn as nn
 from PIL import Image
-from torch.nn.functional import relu
+from torch.nn.functional import relu, pairwise_distance
 from torch.utils.data import Dataset, DataLoader
 
 
@@ -39,7 +39,7 @@ class ProductPairs(Dataset):
         product_id2, text2, image2 = self.__process_row(row2)
 
         return torch.tensor([product_id1, product_id2]), torch.stack((text1, text2)), torch.stack(
-            (image1, image2)), torch.tensor([label]).type(torch.FloatTensor)
+            (image1, image2)), torch.tensor([label])
 
 
 class SiameseNetwork(nn.Module):
@@ -50,30 +50,54 @@ class SiameseNetwork(nn.Module):
         self.l1 = nn.Linear(input_size, input_size // 2)
         self.l2 = nn.Linear(input_size // 2, input_size // 4)
         self.l3 = nn.Linear(input_size // 4, input_size // 8)
+        self.l4 = nn.Linear(input_size // 8, input_size // 16)
 
-        concat_size = input_size * 2 // 8
-        self.l4 = nn.Linear(concat_size, concat_size // 2)
-        self.l5 = nn.Linear(concat_size // 2, concat_size // 4)
-        self.l6 = nn.Linear(concat_size // 4, concat_size // 8)
-        self.out = nn.Linear(concat_size // 8, 1)
+        # concat_size = input_size * 2 // 8
+        # self.l4 = nn.Linear(concat_size, concat_size // 2)
+        # self.l5 = nn.Linear(concat_size // 2, concat_size // 4)
+        # self.l6 = nn.Linear(concat_size // 4, concat_size // 8)
+        # self.out = nn.Linear(concat_size // 8, 1)
 
     def encoder(self, x):
         x = relu(self.l1(x))
         x = relu(self.l2(x))
-        x = self.l3(x)
+        x = relu(self.l3(x))
+        x = self.l4(x)
         return x
 
     def forward(self, x1, x2):
         x1 = self.encoder(x1)
         x2 = self.encoder(x2)
 
-        x = torch.cat((x1, x2), 1)
-        x = relu(self.l4(x))
-        x = relu(self.l5(x))
-        x = relu(self.l6(x))
-        x = torch.sigmoid(self.out(x))
+        # x = torch.cat((x1, x2), 1)
+        # x = relu(self.l4(x))
+        # x = relu(self.l5(x))
+        # x = relu(self.l6(x))
+        # x = torch.sigmoid(self.out(x))
 
-        return x
+        return x1, x2
+
+
+class ContrastiveLoss(torch.nn.Module):
+    """
+    Credits to: James D. McCaffrey
+    (https://jamesmccaffrey.wordpress.com/2022/03/17/yet-another-siamese-neural-network-example-using-pytorch/)
+    """
+
+    def __init__(self, m=2.0):
+        super(ContrastiveLoss, self).__init__()  # pre 3.3 syntax
+        self.m = m  # margin or radius
+
+    def forward(self, y1, y2, flag):
+        # flag = 0 means y1 and y2 are supposed to be same
+        # flag = 1 means y1 and y2 are supposed to be different
+
+        euc_dist = pairwise_distance(y1, y2)
+
+        loss = torch.mean((1 - flag) * torch.pow(euc_dist, 2) +
+                          flag * torch.pow(torch.clamp(self.m - euc_dist, min=0.0), 2))
+
+        return loss
 
 
 def get_data(device, clip_model, modal, text, image):
@@ -92,8 +116,9 @@ def get_data(device, clip_model, modal, text, image):
 
 
 def main(parse_args):
-    log_file = open(f"{parse_args.modal}.log", 'w')
-    sys.stdout = log_file
+    if parse_args.log:
+        log_file = open(f"{parse_args.modal}.log", 'w')
+        sys.stdout = log_file
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
     clip_model, preprocess = clip.load("ViT-B/32", device=device, jit=False)
@@ -106,15 +131,16 @@ def main(parse_args):
     train_set = ProductPairs(products, pairs["train"], clip.tokenize, preprocess)
     valid_set = ProductPairs(products, pairs["test"], clip.tokenize, preprocess)
 
-    train_loader = DataLoader(train_set, batch_size=10_000, shuffle=True)
-    valid_loader = DataLoader(valid_set, batch_size=10_000, shuffle=False)
+    train_loader = DataLoader(train_set, batch_size=10, shuffle=True)
+    valid_loader = DataLoader(valid_set, batch_size=10, shuffle=False)
 
     input_size = 1024 if parse_args.modal == "text_image" else 512
     model = SiameseNetwork(input_size)
     model = model.to(device)
     print(parse_args.modal, model)
     # TODO: Implement and use contrastive loss instead of cross entropy.
-    criterion = nn.BCELoss()
+    criterion = ContrastiveLoss()
+    print(criterion)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
     num_epochs = 10
@@ -132,9 +158,10 @@ def main(parse_args):
             data2 = get_data(device, clip_model, parse_args.modal, text2, image2)
 
             optimizer.zero_grad()
-            output = model(data1, data2)
+            y1, y2 = model(data1, data2)
 
-            loss = criterion(output, label)
+            loss = criterion(y1, y2, label)
+            print(loss)
             loss.backward()
 
             optimizer.step()
@@ -153,7 +180,7 @@ def main(parse_args):
                 data2 = get_data(device, clip_model, parse_args.modal, text2, image2)
 
                 output = model(data1, data2)
-                loss = criterion(output, label)
+                loss = criterion(*output, label)
                 valid_loss += loss.item()
 
         print(f"Epoch {epoch} \t Training Loss: {train_loss} \t Validation Loss: {valid_loss}")
@@ -163,7 +190,8 @@ def main(parse_args):
             min_valid_loss = valid_loss
             torch.save(model, f"models/sm_model_{parse_args.modal}_e{epoch}_{len(train_set)}_{len(valid_set)}.pt")
 
-    log_file.close()
+    if parse_args.log:
+        log_file.close()
 
 
 if __name__ == "__main__":
@@ -174,5 +202,6 @@ if __name__ == "__main__":
     parser.add_argument("dataset", type=pathlib.Path,
                         help="Directory where products and pairs files are stored.")
     parser.add_argument("-m", "--modal", choices=["text_image", "text", "image"], default="text_image",
-                        help="Modalities to use in the network")
+                        help="Modalities to use in the network.")
+    parser.add_argument("--log", action="store_true", help="Everything printed will be stored in a file.")
     main(parser.parse_args())
