@@ -61,16 +61,10 @@ def main(parse_args):
 
     products_txt_img = pd.read_parquet(f"{parse_args.dataset}/products_text_image.parquet", engine="pyarrow")
 
-    part_size = len(products_txt_img) // 4
-    part1 = products_txt_img.iloc[:part_size]
-    part2 = products_txt_img.iloc[part_size:part_size * 2]
-    part3 = products_txt_img.iloc[part_size * 2: part_size * 3]
-    part4 = products_txt_img.iloc[part_size * 3:]
+    half = products_txt_img.iloc[:len(products_txt_img) // 2]
+    processed = process_part_image(half, preprocess)
 
-    for i, part in enumerate([part1, part2, part3, part4]):
-        processed = process_part_image(part1, preprocess)
-
-        np.save(f"{parse_args.dataset}/processed_image_{i + 1}.npy", processed)
+    np.save(f"{parse_args.dataset}/processed_image_half.npy", processed)
 
     print("Finished processing images")
 
