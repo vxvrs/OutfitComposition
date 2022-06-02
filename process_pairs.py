@@ -73,6 +73,7 @@ def main(parse_args):
     processed = process_part_image(products_txt_img, preprocess, most_common)
 
     np.save(f"{parse_args.dataset}/processed_image_part.npy", processed)
+    del processed
 
     print("Finished processing images")
 
