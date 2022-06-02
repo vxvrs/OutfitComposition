@@ -9,3 +9,4 @@ Pillow~=9.1.0
 argparse~=1.4.0
 scikit-learn~=1.0.2
 pyarrow~=7.0.0
+tqdm~=4.64.0
