@@ -49,7 +49,7 @@ def main(parse_args):
     all_pairs = used_outfit_pairs | random_pairs
     all_ids = [i for i1, i2, _ in all_pairs for i in [i1, i2]]
     print("Number of ids: ", len(set(all_ids)))
-    most_common = [item for item, c in Counter(all_ids).most_common(len(set(all_ids)) // 3)]
+    most_common = [item for item, c in Counter(all_ids).most_common(len(set(all_ids)) // 5)]
     print("Most common:", len(most_common), all_ids.count(most_common[0]), all_ids.count(most_common[-1]))
 
     outfit_train, outfit_test = train_test_split(list(used_outfit_pairs), test_size=0.3)
