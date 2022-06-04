@@ -1,5 +1,3 @@
-import sys
-
 import clip
 import numpy as np
 import pandas as pd
@@ -12,11 +10,14 @@ from torch.utils.data import Dataset, DataLoader
 
 class ProductPairs(Dataset):
     # TODO: Remove clip tokenizing, preprocessing and use product_ids dictionary for lookup.
-    def __init__(self, products, pairs, tokenizer, preprocess):
+    def __init__(self, products, pairs, tokenizer, preprocess, modal, processed_text=None, processed_image=None):
         self.products = products
         self.pairs = pairs
         self.tokenizer = tokenizer
         self.preprocess = preprocess
+        self.modal = modal
+        self.processed_text = processed_text
+        self.processed_image = processed_image
 
     def __len__(self):
         return len(self.pairs)
@@ -29,8 +30,25 @@ class ProductPairs(Dataset):
 
         return product_id, tokens, image
 
+    def __load_product(self, product_id):
+        text = torch.empty(77)
+        image = torch.empty((3, 224, 224))
+
+        if self.processed_image and product_id in self.processed_image.keys():
+            # Product is preprocessed, load from dict.
+            print("Preprocessed")
+        elif "image" in self.modal:
+            # Product is not preprocessed, process as usual by finding row and __process_row.
+            print("Process")
+
+        if self.processed_text and product_id in self.processed_text.keys():
+            # Product is preprocessed, load from dict. Text is always preprocessed.
+            print(self.processed_text[product_id].shape)
+
     def __getitem__(self, idx):
         product_id1, product_id2, label = self.pairs[idx]
+
+        self.__load_product(product_id1)
 
         row1 = self.products.loc[self.products.product_id == product_id1]
         row2 = self.products.loc[self.products.product_id == product_id2]
@@ -38,12 +56,13 @@ class ProductPairs(Dataset):
         product_id1, text1, image1 = self.__process_row(row1)
         product_id2, text2, image2 = self.__process_row(row2)
 
+        print("Text/image shapes:", text1.shape, image1.shape)
+
         return torch.tensor([product_id1, product_id2]), torch.stack((text1, text2)), torch.stack(
             (image1, image2)), torch.tensor([label])
 
 
 class SiameseNetwork(nn.Module):
-    # TODO: Remove "funnel" for use of contrastive loss
     def __init__(self, input_size=1024):
         super(SiameseNetwork, self).__init__()
 
@@ -51,12 +70,6 @@ class SiameseNetwork(nn.Module):
         self.l2 = nn.Linear(input_size // 2, input_size // 4)
         self.l3 = nn.Linear(input_size // 4, input_size // 8)
         self.l4 = nn.Linear(input_size // 8, input_size // 16)
-
-        # concat_size = input_size * 2 // 8
-        # self.l4 = nn.Linear(concat_size, concat_size // 2)
-        # self.l5 = nn.Linear(concat_size // 2, concat_size // 4)
-        # self.l6 = nn.Linear(concat_size // 4, concat_size // 8)
-        # self.out = nn.Linear(concat_size // 8, 1)
 
     def encoder(self, x):
         x = relu(self.l1(x))
@@ -68,12 +81,6 @@ class SiameseNetwork(nn.Module):
     def forward(self, x1, x2):
         x1 = self.encoder(x1)
         x2 = self.encoder(x2)
-
-        # x = torch.cat((x1, x2), 1)
-        # x = relu(self.l4(x))
-        # x = relu(self.l5(x))
-        # x = relu(self.l6(x))
-        # x = torch.sigmoid(self.out(x))
 
         return x1, x2
 
@@ -100,7 +107,7 @@ class ContrastiveLoss(torch.nn.Module):
         return loss
 
 
-def get_data(device, clip_model, modal, text, image):
+def clip_encode(device, clip_model, modal, text, image):
     with torch.no_grad():
         text_embed = clip_model.encode_text(text.to(device)) if "text" in modal else None
         image_embed = clip_model.encode_image(image.to(device)) if "image" in modal else None
@@ -115,30 +122,53 @@ def get_data(device, clip_model, modal, text, image):
     return data.to(device)
 
 
-def main(parse_args):
-    if parse_args.log:
-        log_file = open(f"{parse_args.modal}.log", 'w')
-        sys.stdout = log_file
+def process_batch(batch, device, clip_model, modal):
+    pid, text, image, label = batch
+    label = label.to(device)
 
+    text1, text2 = torch.unbind(text, 1)
+    image1, image2 = torch.unbind(image, 1)
+
+    data1 = clip_encode(device, clip_model, modal, text1, image1)
+    data2 = clip_encode(device, clip_model, modal, text2, image2)
+
+    return data1, data2, label
+
+
+def main(parse_args):
     device = "cuda" if torch.cuda.is_available() else "cpu"
     clip_model, preprocess = clip.load("ViT-B/32", device=device, jit=False)
 
     pairs = np.load(f"{parse_args.dataset}/pairs.npy", allow_pickle=True)
     pairs: dict = pairs.item()
-    print(len(pairs["train"]), len(pairs["test"]))
+    print("Pairs length:", len(pairs["train"]), len(pairs["test"]))
+
+    processed_text = None
+    if "text" in parse_args.modal:
+        processed_text = np.load(f"{parse_args.dataset}/processed_text.npy", allow_pickle=True)
+        processed_text: dict = processed_text.item()
+        print("Processed text length:", len(processed_text))
+
+    processed_image_part = None
+    if "image" in parse_args.modal:
+        processed_image_part = np.load(f"{parse_args.dataset}/processed_image_part_20.npy", allow_pickle=True)
+        processed_image_part: dict = processed_image_part.item()
+        print("Processed image length:", len(processed_image_part))
 
     products = pd.read_parquet(f"{parse_args.dataset}/products_text_image.parquet", engine="pyarrow")
-    train_set = ProductPairs(products, pairs["train"], clip.tokenize, preprocess)
-    valid_set = ProductPairs(products, pairs["test"], clip.tokenize, preprocess)
+    train_set = ProductPairs(products, pairs["train"], clip.tokenize, preprocess, parse_args.modal,
+                             processed_text=processed_text, processed_image=processed_image_part)
+    valid_set = ProductPairs(products, pairs["test"], clip.tokenize, preprocess, parse_args.modal)
 
-    train_loader = DataLoader(train_set, batch_size=10, shuffle=True)
-    valid_loader = DataLoader(valid_set, batch_size=10, shuffle=False)
+    train_loader = DataLoader(train_set, batch_size=100, shuffle=True)
+    valid_loader = DataLoader(valid_set, batch_size=100, shuffle=False)
+
+    print("All data loaded!")
 
     input_size = 1024 if parse_args.modal == "text_image" else 512
     model = SiameseNetwork(input_size)
     model = model.to(device)
     print(parse_args.modal, model)
-    # TODO: Implement and use contrastive loss instead of cross entropy.
     criterion = ContrastiveLoss()
     print(criterion)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
@@ -148,14 +178,7 @@ def main(parse_args):
     for epoch in range(1, num_epochs + 1):
         train_loss = 0.0
         for batch in train_loader:
-            pid, text, image, label = batch
-            label = label.to(device)
-
-            text1, text2 = torch.unbind(text, 1)
-            image1, image2 = torch.unbind(image, 1)
-
-            data1 = get_data(device, clip_model, parse_args.modal, text1, image1)
-            data2 = get_data(device, clip_model, parse_args.modal, text2, image2)
+            data1, data2, label = process_batch(batch, device, clip_model, parse_args.modal)
 
             optimizer.zero_grad()
             y1, y2 = model(data1, data2)
@@ -170,14 +193,7 @@ def main(parse_args):
         valid_loss = 0.0
         with torch.no_grad():
             for batch in valid_loader:
-                pid, text, image, label = batch
-                label = label.to(device)
-
-                text1, text2 = torch.unbind(text, 1)
-                image1, image2 = torch.unbind(image, 1)
-
-                data1 = get_data(device, clip_model, parse_args.modal, text1, image1)
-                data2 = get_data(device, clip_model, parse_args.modal, text2, image2)
+                data1, data2, label = process_batch(batch, device, clip_model, parse_args.modal)
 
                 output = model(data1, data2)
                 loss = criterion(*output, label)
@@ -190,9 +206,6 @@ def main(parse_args):
             min_valid_loss = valid_loss
             torch.save(model, f"models/sm_model_{parse_args.modal}_e{epoch}_{len(train_set)}_{len(valid_set)}.pt")
 
-    if parse_args.log:
-        log_file.close()
-
 
 if __name__ == "__main__":
     import argparse
@@ -203,5 +216,4 @@ if __name__ == "__main__":
                         help="Directory where products and pairs files are stored.")
     parser.add_argument("-m", "--modal", choices=["text_image", "text", "image"], default="text_image",
                         help="Modalities to use in the network.")
-    parser.add_argument("--log", action="store_true", help="Everything printed will be stored in a file.")
     main(parser.parse_args())
