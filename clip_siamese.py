@@ -37,9 +37,12 @@ class ProductPairs(Dataset):
         if self.processed_image and product_id in self.processed_image.keys():
             # Product is preprocessed, load from dict.
             print("Preprocessed")
+            image = self.processed_image[product_id]
         elif "image" in self.modal:
             # Product is not preprocessed, process as usual by finding row and __process_row.
             print("Process")
+            row = self.products.loc[self.products.product_id == product_id]
+            product_id, text, image =
 
         if self.processed_text and product_id in self.processed_text.keys():
             # Product is preprocessed, load from dict. Text is always preprocessed.
@@ -143,17 +146,13 @@ def main(parse_args):
     pairs: dict = pairs.item()
     print("Pairs length:", len(pairs["train"]), len(pairs["test"]))
 
-    processed_text = None
-    if "text" in parse_args.modal:
-        processed_text = np.load(f"{parse_args.dataset}/processed_text.npy", allow_pickle=True)
-        processed_text: dict = processed_text.item()
-        print("Processed text length:", len(processed_text))
+    processed_text = np.load(f"{parse_args.dataset}/processed_text.npy",
+                             allow_pickle=True).item() if "text" in parse_args.modal else None
+    print("Processed text length:", len(processed_text))
 
-    processed_image_part = None
-    if "image" in parse_args.modal:
-        processed_image_part = np.load(f"{parse_args.dataset}/processed_image_part_20.npy", allow_pickle=True)
-        processed_image_part: dict = processed_image_part.item()
-        print("Processed image length:", len(processed_image_part))
+    processed_image_part = np.load(f"{parse_args.dataset}/processed_image_part_20.npy",
+                                   allow_pickle=True).item() if "image" in parse_args.modal else None
+    print("Processed image length:", len(processed_image_part))
 
     products = pd.read_parquet(f"{parse_args.dataset}/products_text_image.parquet", engine="pyarrow")
     train_set = ProductPairs(products, pairs["train"], clip.tokenize, preprocess, parse_args.modal,
