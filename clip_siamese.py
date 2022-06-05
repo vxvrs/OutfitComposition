@@ -9,7 +9,6 @@ from torch.utils.data import Dataset, DataLoader
 
 
 class ProductPairs(Dataset):
-    # TODO: Remove clip tokenizing, preprocessing and use product_ids dictionary for lookup.
     def __init__(self, products, pairs, tokenizer, preprocess, modal, processed_text=None, processed_image=None):
         self.products = products
         self.pairs = pairs
@@ -51,15 +50,8 @@ class ProductPairs(Dataset):
     def __getitem__(self, idx):
         product_id1, product_id2, label = self.pairs[idx]
 
-        self.__load_product(product_id1)
-
-        row1 = self.products.loc[self.products.product_id == product_id1]
-        row2 = self.products.loc[self.products.product_id == product_id2]
-
-        product_id1, text1, image1 = self.__process_row(row1)
-        product_id2, text2, image2 = self.__process_row(row2)
-
-        print("Text/image shapes:", text1.shape, image1.shape)
+        product_id1, text1, image1 = self.__load_product(product_id1)
+        product_id2, text2, image2 = self.__load_product(product_id2)
 
         return torch.tensor([product_id1, product_id2]), torch.stack((text1, text2)), torch.stack(
             (image1, image2)), torch.tensor([label])
@@ -148,19 +140,19 @@ def main(parse_args):
 
     processed_text = np.load(f"{parse_args.dataset}/processed_text.npy",
                              allow_pickle=True).item() if "text" in parse_args.modal else None
-    print("Processed text length:", len(processed_text))
+    if processed_text: print("Processed text length:", len(processed_text))
 
     processed_image_part = np.load(f"{parse_args.dataset}/processed_image_part_20.npy",
                                    allow_pickle=True).item() if "image" in parse_args.modal else None
-    print("Processed image length:", len(processed_image_part))
+    if processed_image_part: print("Processed image length:", len(processed_image_part))
 
     products = pd.read_parquet(f"{parse_args.dataset}/products_text_image.parquet", engine="pyarrow")
     train_set = ProductPairs(products, pairs["train"], clip.tokenize, preprocess, parse_args.modal,
                              processed_text=processed_text, processed_image=processed_image_part)
     valid_set = ProductPairs(products, pairs["test"], clip.tokenize, preprocess, parse_args.modal)
 
-    train_loader = DataLoader(train_set, batch_size=100, shuffle=True)
-    valid_loader = DataLoader(valid_set, batch_size=100, shuffle=False)
+    train_loader = DataLoader(train_set, batch_size=10_000, shuffle=True)
+    valid_loader = DataLoader(valid_set, batch_size=10_000, shuffle=False)
 
     print("All data loaded!")
 
