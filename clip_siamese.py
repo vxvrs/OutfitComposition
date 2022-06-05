@@ -35,18 +35,18 @@ class ProductPairs(Dataset):
         image = torch.empty((3, 224, 224))
 
         if self.processed_image and product_id in self.processed_image.keys():
-            # Product is preprocessed, load from dict.
-            print("Preprocessed")
             image = self.processed_image[product_id]
         elif "image" in self.modal:
-            # Product is not preprocessed, process as usual by finding row and __process_row.
-            print("Process")
             row = self.products.loc[self.products.product_id == product_id]
-            product_id, text, image =
+            product_id, text, image = self.__process_row(row)
 
         if self.processed_text and product_id in self.processed_text.keys():
-            # Product is preprocessed, load from dict. Text is always preprocessed.
-            print(self.processed_text[product_id].shape)
+            text = self.processed_text[product_id]
+        elif "text" in self.modal:
+            row = self.products.loc[self.products.product_id == product_id]
+            product_id, text, image = self.__process_row(row)
+
+        return product_id, text, image
 
     def __getitem__(self, idx):
         product_id1, product_id2, label = self.pairs[idx]
