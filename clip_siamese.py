@@ -91,13 +91,13 @@ class ContrastiveLoss(torch.nn.Module):
         self.m = m  # margin or radius
 
     def forward(self, y1, y2, flag):
-        # flag = 0 means y1 and y2 are supposed to be same
-        # flag = 1 means y1 and y2 are supposed to be different
+        # flag = 1 means y1 and y2 are supposed to be same
+        # flag = 0 means y1 and y2 are supposed to be different
 
         euc_dist = pairwise_distance(y1, y2)
 
-        loss = torch.mean((1 - flag) * torch.pow(euc_dist, 2) +
-                          flag * torch.pow(torch.clamp(self.m - euc_dist, min=0.0), 2))
+        loss = torch.mean(flag * torch.pow(euc_dist, 2) +
+                          (1 - flag) * torch.pow(torch.clamp(self.m - euc_dist, min=0.0), 2))
 
         return loss
 
