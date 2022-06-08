@@ -151,8 +151,8 @@ def main(parse_args):
                              processed_text=processed_text, processed_image=processed_image_part)
     valid_set = ProductPairs(products, pairs["test"], clip.tokenize, preprocess, parse_args.modal)
 
-    train_loader = DataLoader(train_set, batch_size=10_000, shuffle=True)
-    valid_loader = DataLoader(valid_set, batch_size=10_000, shuffle=False)
+    train_loader = DataLoader(train_set, batch_size=5_000, shuffle=True)
+    valid_loader = DataLoader(valid_set, batch_size=5_000, shuffle=False)
 
     print("All data loaded!")
 
