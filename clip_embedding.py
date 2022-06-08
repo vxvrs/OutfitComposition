@@ -14,7 +14,6 @@ def reciprocal_rank(item, ranking):
 
 
 class OutfitEmbeddingCLIP:
-    # TODO: Remove use of FarfetchDataset class and use preprocessed dictionaries.
     def __init__(self, products, modal, encoder=None, device="cpu", processed_text=None, processed_image=None):
         self.device = device
         self.tokenizer = clip.tokenize
@@ -134,6 +133,9 @@ def main(parse_args):
         print("Reciprocal rank:", r_rank)
 
     print("Mean reciprocal rank:", np.mean(recip_ranks))
+    with open(f"{parse_args.dataset}/mean_recip_rank.txt", 'a+') as rank_file:
+        rank_file.write(f"MRR-{parse_args.modal}: {np.mean(recip_ranks)}")
+
     predicted_product.to_csv(f"{parse_args.dataset}/predicted_product_{parse_args.modal}.csv", index=False)
 
 

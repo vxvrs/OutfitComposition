@@ -164,7 +164,7 @@ def main(parse_args):
     print(criterion)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-    num_epochs = 10
+    num_epochs = 40
     min_valid_loss = np.inf
     for epoch in range(1, num_epochs + 1):
         train_loss = 0.0
@@ -195,7 +195,8 @@ def main(parse_args):
         if min_valid_loss > valid_loss:
             print(f"Validation Loss Decreased({min_valid_loss:.6f}--->{valid_loss:.6f})")
             min_valid_loss = valid_loss
-            torch.save(model, f"models/sm_model_{parse_args.modal}_e{epoch}_{len(train_set)}_{len(valid_set)}.pt")
+            torch.save(model,
+                       f"models/sm_model_{parse_args.modal}_e{epoch}_l{round(valid_loss, 3)}_{len(train_set)}_{len(valid_set)}.pt")
 
 
 if __name__ == "__main__":
