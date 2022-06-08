@@ -13,9 +13,11 @@ def reciprocal_rank(item, ranking):
 
 
 class OutfitEmbeddingCLIP:
-    def __init__(self, products, modal, device="cpu"):
+    # TODO: Remove use of FarfetchDataset class and use preprocessed dictionaries.
+    def __init__(self, products, modal, encoder=None, device="cpu"):
         self.device = device
         self.model, self.preprocess = clip.load("ViT-B/32", device=device, jit=False)
+        self.encoder = encoder
 
         self.products = products
         self.dataset = data_farfetch.FarfetchDataset(products, clip.tokenize, self.preprocess)
