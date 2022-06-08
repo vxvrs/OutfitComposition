@@ -2,6 +2,7 @@ import clip
 import numpy as np
 import pandas as pd
 import torch
+from PIL import Image
 
 import data_farfetch
 
@@ -14,22 +15,48 @@ def reciprocal_rank(item, ranking):
 
 class OutfitEmbeddingCLIP:
     # TODO: Remove use of FarfetchDataset class and use preprocessed dictionaries.
-    def __init__(self, products, modal, encoder=None, device="cpu"):
+    def __init__(self, products, modal, encoder=None, device="cpu", processed_text=None, processed_image=None):
         self.device = device
+        self.tokenizer = clip.tokenize
         self.model, self.preprocess = clip.load("ViT-B/32", device=device, jit=False)
         self.encoder = encoder
 
         self.products = products
         self.dataset = data_farfetch.FarfetchDataset(products, clip.tokenize, self.preprocess)
         self.modal = modal
+        self.processed_text = processed_text
+        self.processed_image = processed_image
 
         self.embedding = dict()
 
+    def __process_row(self, row):
+        product_id, text, image_path = row.iloc[0]
+        tokens = self.tokenizer(text, truncate=True).squeeze(0)
+        with Image.open(image_path) as img_file:
+            image = self.preprocess(img_file)
+
+        return product_id, tokens, image
+
     def get_product(self, product_id):
-        return self.products.loc[self.products["product_id"] == product_id]
+        text = torch.empty(77)
+        image = torch.empty((3, 224, 224))
+
+        if self.processed_image and product_id in self.processed_image.keys():
+            image = self.processed_image[product_id]
+        elif "image" in self.modal:
+            row = self.products.loc[self.products.product_id == product_id]
+            product_id, text, image = self.__process_row(row)
+
+        if self.processed_text and product_id in self.processed_text.keys():
+            text = self.processed_text[product_id]
+        elif "text" in self.modal:
+            row = self.products.loc[self.products.product_id == product_id]
+            product_id, text, image = self.__process_row(row)
+
+        return product_id, text, image
 
     def embed(self, product_id):
-        _, text, image = self.dataset.get_product(product_id)
+        _, text, image = self.get_product(product_id)
         text = text.unsqueeze(0)
         image = image.unsqueeze(0)
 
@@ -74,9 +101,17 @@ def main(parse_args):
     data_farfetch.dataset_path = parse_args.dataset
 
     products = pd.read_parquet(f"{parse_args.dataset}/products_text_image.parquet", engine="pyarrow")
+    processed_text = np.load(f"{parse_args.dataset}/processed_text.npy",
+                             allow_pickle=True).item() if "text" in parse_args.modal else None
+    if processed_text: print("Processed text length:", len(processed_text))
+
+    processed_image_part = np.load(f"{parse_args.dataset}/processed_image_part_20.npy",
+                                   allow_pickle=True).item() if "image" in parse_args.modal else None
+    if processed_image_part: print("Processed image length:", len(processed_image_part))
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    embed = OutfitEmbeddingCLIP(products, parse_args.modal, device=device)
+    embed = OutfitEmbeddingCLIP(products, parse_args.modal, device=device, processed_text=processed_text,
+                                processed_image=processed_image_part)
 
     outfits = pd.read_parquet(f"{parse_args.dataset}/outfits.parquet", engine="pyarrow")
 
