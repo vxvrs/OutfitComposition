@@ -6,6 +6,7 @@ from PIL import Image
 from tqdm import tqdm
 
 import data_farfetch
+from clip_siamese import SiameseNetwork
 
 
 def reciprocal_rank(item, ranking):
@@ -15,10 +16,11 @@ def reciprocal_rank(item, ranking):
 
 
 class OutfitEmbeddingCLIP:
-    def __init__(self, products, modal, model=None, device="cpu", processed_text=None, processed_image=None):
+    def __init__(self, products, modal, model: SiameseNetwork = None, device="cpu", processed_text=None,
+                 processed_image=None):
         self.device = device
         self.tokenizer = clip.tokenize
-        self.model, self.preprocess = clip.load("ViT-B/32", device=device, jit=False)
+        self.clip_model, self.preprocess = clip.load("ViT-B/32", device=device, jit=False)
         self.encoder = model.encoder if model is not None else None
 
         self.products = products
@@ -61,8 +63,8 @@ class OutfitEmbeddingCLIP:
         image = image.unsqueeze(0)
 
         with torch.no_grad():
-            text_encoding = self.model.encode_text(text.to(self.device)) if "text" in self.modal else None
-            image_encoding = self.model.encode_image(image.to(self.device)) if "image" in self.modal else None
+            text_encoding = self.clip_model.encode_text(text.to(self.device)) if "text" in self.modal else None
+            image_encoding = self.clip_model.encode_image(image.to(self.device)) if "image" in self.modal else None
 
         if text_encoding is not None and image_encoding is not None:
             encoding = torch.cat((text_encoding, image_encoding), 1)
@@ -115,7 +117,7 @@ def main(parse_args):
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    model = torch.load(parse_args.model, map_location=device) if parse_args.model else None
+    model = torch.load(parse_args.clip_model, map_location=device) if parse_args.clip_model else None
     if model: model.eval()
 
     embed = OutfitEmbeddingCLIP(products, parse_args.modal, model=model, device=device, processed_text=processed_text,
