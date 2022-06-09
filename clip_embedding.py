@@ -88,12 +88,12 @@ class OutfitEmbeddingCLIP:
         self.embedding = np.load(filename, allow_pickle=True)
 
     def fitb(self, incomplete_outfit, candidates):
-        outfit_embed = np.array([self.embed(product_id).numpy() for product_id in incomplete_outfit])
+        outfit_embed = np.array([self.embed(product_id).cpu().numpy() for product_id in incomplete_outfit])
         base_centroid = outfit_embed.mean(axis=0)
 
         distances_candidates = dict()
         for product_id in candidates:
-            candidate_embed = np.append(outfit_embed, self.embed(product_id).numpy())
+            candidate_embed = np.append(outfit_embed, self.embed(product_id).cpu().numpy())
             # candidate_embed = np.array(
             #     [self.embed(product_id).cpu().numpy() for product_id in np.append(incomplete_outfit, product_id)])
             candidate_centroid = candidate_embed.mean(axis=0)
