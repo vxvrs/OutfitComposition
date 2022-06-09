@@ -3,6 +3,7 @@ import numpy as np
 import pandas as pd
 import torch
 from PIL import Image
+from tqdm import tqdm
 
 import data_farfetch
 
@@ -14,11 +15,11 @@ def reciprocal_rank(item, ranking):
 
 
 class OutfitEmbeddingCLIP:
-    def __init__(self, products, modal, encoder=None, device="cpu", processed_text=None, processed_image=None):
+    def __init__(self, products, modal, model=None, device="cpu", processed_text=None, processed_image=None):
         self.device = device
         self.tokenizer = clip.tokenize
         self.model, self.preprocess = clip.load("ViT-B/32", device=device, jit=False)
-        self.encoder = encoder
+        self.encoder = model.encoder if model is not None else None
 
         self.products = products
         self.dataset = data_farfetch.FarfetchDataset(products, clip.tokenize, self.preprocess)
@@ -68,6 +69,10 @@ class OutfitEmbeddingCLIP:
         else:
             encoding = text_encoding if text_encoding is not None else image_encoding
 
+        if self.encoder:
+            with torch.no_grad():
+                encoding = self.encoder(encoding)
+
         return encoding.squeeze(0)
 
     def setup_embedding(self):
@@ -109,34 +114,55 @@ def main(parse_args):
     if processed_image_part: print("Processed image length:", len(processed_image_part))
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
-    embed = OutfitEmbeddingCLIP(products, parse_args.modal, device=device, processed_text=processed_text,
+
+    model = torch.load(parse_args.model, map_location=device) if parse_args.model else None
+    if model: model.eval()
+
+    embed = OutfitEmbeddingCLIP(products, parse_args.modal, model=model, device=device, processed_text=processed_text,
                                 processed_image=processed_image_part)
 
-    outfits = pd.read_parquet(f"{parse_args.dataset}/outfits.parquet", engine="pyarrow")
-
-    missing_product = outfits[["outfit_id", "missing_product"]]
-    missing_product.to_csv(f"{parse_args.dataset}/missing_product.csv", index=False)
+    print("Everything loaded!")
 
     predicted_product = pd.DataFrame(columns=["outfit_id", "predicted_product"])
+    if parse_args.predict:
+        outfits = pd.read_parquet(parse_args.predict, engine="pyarrow")
 
-    recip_ranks = list()
-    for row in outfits[["outfit_id", "incomplete_outfit", "candidates", "missing_product"]].iloc:
-        outfit_id, incomplete_outfit, candidates, missing_product = row
-        ranking = embed.fitb(incomplete_outfit, candidates)
-        predicted_id, _ = ranking[0]
+        row_to_embedded = outfits[["outfit_id", "incomplete_outfit", "candidates"]]
+        for row in tqdm(row_to_embedded.iloc, total=len(row_to_embedded)):
+            outfit_id, incomplete_outfit, candidates = row
+            ranking = embed.fitb(incomplete_outfit, candidates)
+            predicted_id, _ = ranking[0]
 
-        new_row = pd.DataFrame.from_dict({"outfit_id": [outfit_id], "predicted_product": [predicted_id]})
-        predicted_product = pd.concat([predicted_product, new_row], ignore_index=True)
+            new_row = pd.DataFrame.from_dict({"outfit_id": [outfit_id], "predicted_product": [predicted_id]})
+            predicted_product = pd.concat([predicted_product, new_row], ignore_index=True)
 
-        r_rank = reciprocal_rank(missing_product, [r for r, _ in ranking])
-        recip_ranks.append(r_rank)
-        print("Reciprocal rank:", r_rank)
+        predicted_product.to_csv(
+            f"{parse_args.dataset}/predicted_product_{parse_args.modal}_{parse_args.predict.stem}.csv", index=False)
+    else:
+        outfits = pd.read_parquet(f"{parse_args.dataset}/outfits.parquet", engine="pyarrow")
 
-    print("Mean reciprocal rank:", np.mean(recip_ranks))
-    with open(f"{parse_args.dataset}/mean_recip_rank.txt", 'a+') as rank_file:
-        rank_file.write(f"MRR-{parse_args.modal}: {np.mean(recip_ranks)}")
+        missing_product = outfits[["outfit_id", "missing_product"]]
+        missing_product.to_csv(f"{parse_args.dataset}/missing_product.csv", index=False)
 
-    predicted_product.to_csv(f"{parse_args.dataset}/predicted_product_{parse_args.modal}.csv", index=False)
+        recip_ranks = list()
+        row_to_embedded = outfits[["outfit_id", "incomplete_outfit", "candidates", "missing_product"]]
+        for row in tqdm(row_to_embedded.iloc, total=len(row_to_embedded)):
+            outfit_id, incomplete_outfit, candidates, missing_product = row
+            ranking = embed.fitb(incomplete_outfit, candidates)
+            predicted_id, _ = ranking[0]
+
+            new_row = pd.DataFrame.from_dict({"outfit_id": [outfit_id], "predicted_product": [predicted_id]})
+            predicted_product = pd.concat([predicted_product, new_row], ignore_index=True)
+
+            r_rank = reciprocal_rank(missing_product, [r for r, _ in ranking])
+            recip_ranks.append(r_rank)
+            print("Reciprocal rank:", r_rank)
+
+        print("Mean reciprocal rank:", np.mean(recip_ranks))
+        with open(f"{parse_args.dataset}/mean_recip_rank.txt", 'a+') as rank_file:
+            rank_file.write(f"MRR-{parse_args.modal}: {np.mean(recip_ranks)}")
+
+        predicted_product.to_csv(f"{parse_args.dataset}/predicted_product_{parse_args.modal}.csv", index=False)
 
 
 if __name__ == "__main__":
@@ -147,4 +173,10 @@ if __name__ == "__main__":
     parser.add_argument("dataset", type=pathlib.Path, help="Directory containing outfits and products files.")
     parser.add_argument("-m", "--modal", choices=["text_image", "text", "image"], default="text_image",
                         help="Modalities to use in the network")
+    parser.add_argument("--predict", type=pathlib.Path, help="Path to parquet file with fill-in-the-blank queries to "
+                                                             "make predictions on. Otherwise outfits.parquet is used "
+                                                             "with correct answers to calculate mean reciprocal rank "
+                                                             "and accuracy.")
+    parser.add_argument("--model", type=pathlib.Path, help="Model to use during encoding. Otherwise just CLIP "
+                                                           "encoding is used without trained encoder.")
     main(parser.parse_args())
