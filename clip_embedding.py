@@ -139,8 +139,11 @@ def main(parse_args):
             new_row = pd.DataFrame.from_dict({"outfit_id": [outfit_id], "predicted_product": [predicted_id]})
             predicted_product = pd.concat([predicted_product, new_row], ignore_index=True)
 
+        clip_name = "_clip" if model else ""
+
         predicted_product.to_csv(
-            f"{parse_args.dataset}/predicted_product_{parse_args.modal}_{parse_args.predict.stem}.csv", index=False)
+            f"{parse_args.dataset}/predicted_product{clip_name}_{parse_args.modal}_{parse_args.predict.stem}.csv",
+            index=False)
     else:
         outfits = pd.read_parquet(f"{parse_args.dataset}/outfits.parquet", engine="pyarrow")
 
