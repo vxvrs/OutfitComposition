@@ -60,7 +60,9 @@ class OutfitEmbeddingCLIP:
     def embed(self, product_id):
         _, text, image = self.get_product(product_id)
         text = text.unsqueeze(0)
+        text = text.type(torch.FloatTensor)
         image = image.unsqueeze(0)
+        image = image.type(torch.FloatTensor)
 
         with torch.no_grad():
             text_encoding = self.clip_model.encode_text(text.to(self.device)) if "text" in self.modal else None
