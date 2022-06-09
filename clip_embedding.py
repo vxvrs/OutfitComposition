@@ -117,7 +117,7 @@ def main(parse_args):
 
     device = "cuda" if torch.cuda.is_available() else "cpu"
 
-    model = torch.load(parse_args.clip_model, map_location=device) if parse_args.clip_model else None
+    model = torch.load(parse_args.model, map_location=device) if parse_args.clip_model else None
     if model: model.eval()
 
     embed = OutfitEmbeddingCLIP(products, parse_args.modal, model=model, device=device, processed_text=processed_text,
