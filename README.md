@@ -3,6 +3,8 @@
 Developed for the Fashion Outfits Challenge organized by Farfetch as part of the
 [2022 SIGIR Workshop On eCommerce](https://sigir-ecom.github.io/).
 
+![Siamese model configuration](images/Siamese-Model.png)
+
 All Python files are implemented with **argparse**. By using `-h` and `--help`  a brief description will be displayed
 for each argument.
 
