@@ -203,7 +203,8 @@ if __name__ == "__main__":
     import argparse
     import pathlib
 
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(description="Train Siamese network with different modalities.",
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("dataset", type=pathlib.Path,
                         help="Directory where products and pairs files are stored.")
     parser.add_argument("-m", "--modal", choices=["text_image", "text", "image"], default="text_image",

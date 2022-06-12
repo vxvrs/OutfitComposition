@@ -94,8 +94,6 @@ class OutfitEmbeddingCLIP:
         distances_candidates = dict()
         for product_id in candidates:
             candidate_embed = np.append(outfit_embed, self.embed(product_id).cpu().numpy())
-            # candidate_embed = np.array(
-            #     [self.embed(product_id).cpu().numpy() for product_id in np.append(incomplete_outfit, product_id)])
             candidate_centroid = candidate_embed.mean(axis=0)
 
             distance = np.linalg.norm(candidate_centroid - base_centroid)
@@ -140,7 +138,6 @@ def main(parse_args):
             predicted_product = pd.concat([predicted_product, new_row], ignore_index=True)
 
         clip_name = "_clip" if model else ""
-
         predicted_product.to_csv(
             f"{parse_args.dataset}/predicted_product{clip_name}_{parse_args.modal}_{parse_args.predict.stem}.csv",
             index=False)
@@ -168,14 +165,19 @@ def main(parse_args):
         with open(f"{parse_args.dataset}/mean_recip_rank.txt", 'a+') as rank_file:
             rank_file.write(f"MRR-{parse_args.modal}: {np.mean(recip_ranks)}")
 
-        predicted_product.to_csv(f"{parse_args.dataset}/predicted_product_{parse_args.modal}.csv", index=False)
+        clip_name = "_clip" if model else ""
+        predicted_product.to_csv(f"{parse_args.dataset}/predicted_product{clip_name}_{parse_args.modal}.csv",
+                                 index=False)
 
 
 if __name__ == "__main__":
     import argparse
     import pathlib
 
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(description="Use the encoder (either CLIP in zero-shot setting or provided "
+                                                 "model) to answer fill-in-the-blank queries found in the file "
+                                                 "outfits.parquet or provided fill-in-the-blank queries.",
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("dataset", type=pathlib.Path, help="Directory containing outfits and products files.")
     parser.add_argument("-m", "--modal", choices=["text_image", "text", "image"], default="text_image",
                         help="Modalities to use in the network")
