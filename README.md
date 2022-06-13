@@ -32,7 +32,8 @@ for each argument. The Python versions used during development are **3.8** and *
 - **scikit-learn**
 
 For versions and more packages used,
-see [requirements.txt](https://github.com/vxvrs/OutfitComposition/blob/master/requirements.txt).
+see [requirements.txt](https://github.com/vxvrs/OutfitComposition/blob/master/requirements.txt). Install all
+requirements by running `pip install -r requirements.txt`
 
 ---
 
