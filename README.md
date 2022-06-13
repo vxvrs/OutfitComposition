@@ -37,7 +37,11 @@ see [requirements.txt](https://github.com/vxvrs/OutfitComposition/blob/master/re
 ---
 
 ## Preparing Data
+The initial files provided by Farfetch as part of their Fashion Outfits Challenge are `products.parquet`,
+`manual_outfits.parquet` and the directory `images` containing product images for all products in the dataset. These
+should all be present in the dataset directory.
 
+The following files are used for preprocessing this data to use with the model:
 1. Use [data_farfetch.py](https://github.com/vxvrs/OutfitComposition/blob/master/data_farfetch.py) to convert the text
    product data into sentences used for training.
     - **Produces files:** *products_text_image.parquet*
@@ -53,11 +57,12 @@ all the processing needed with the files listed above.
 
 ## Usage
 
+The following files are used to train, evaluate and make predictions with the model:
+
 - Use [clip_siamese.py](https://github.com/vxvrs/OutfitComposition/blob/master/clip_siamese.py) to train the Siamese
   networks with different modalities.
     - **Files needed:** *pairs.npy*, *processed_text.npy*, *processed_image_part.npy*, *products_text_image.parquet*
 - Use [clip_embedding.py](https://github.com/vxvrs/OutfitComposition/blob/master/clip_embedding.py) to use either CLIP
   in a zero-shot setting or a trained encoder to answer FITB queries.
-    - **Files needed:** *products_text_image.parquet*, *processed_text.npy*, *processed_image_part.npy*, *
-      outfits.parquet*
-      (when file with FITB queries not provided)
+    - **Files needed:** *products_text_image.parquet*, *processed_text.npy*, *processed_image_part.npy*,
+      *outfits.parquet* (when file with FITB queries not provided)
