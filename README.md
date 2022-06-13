@@ -1,10 +1,10 @@
-# Outfit Composition with Siamese Networks
+# Outfit Completion with Siamese Networks
 
 Developed for the Fashion Outfits Challenge organized by Farfetch as part of the
 [2022 SIGIR Workshop On eCommerce](https://sigir-ecom.github.io/).
 
-Outfit composition is a task when, given an item, the model is to recommend products that complete the outfit. In this
-project, we consider the task of outfit composition in the context of the Farfetch Data Challenge.
+Outfit completion is a task when, given an item, the model is to recommend products that complete the outfit. In this
+project, we consider the task of outfit completion in the context of the Farfetch Data Challenge.
 
 Since the dataset used is multimodal, the task can be approached using multimodal machine learning. Here we look at
 using text and image data to train the model and its performance with unimodal and multimodal product
