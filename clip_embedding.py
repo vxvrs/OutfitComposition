@@ -143,6 +143,8 @@ def main(parse_args):
             index=False)
     else:
         outfits = pd.read_parquet(f"{parse_args.dataset}/outfits.parquet", engine="pyarrow")
+        if parse_args.evaluate:
+            outfits = pd.read_parquet(f"{parse_args.evaluate}", engine="pyarrow")
 
         clip_name = "_clip" if not model else ""
         missing_product = outfits[["outfit_id", "missing_product"]]
@@ -182,6 +184,9 @@ if __name__ == "__main__":
     parser.add_argument("dataset", type=pathlib.Path, help="Directory containing outfits and products files.")
     parser.add_argument("-m", "--modal", choices=["text_image", "text", "image"], default="text_image",
                         help="Modalities to use in the network")
+    parser.add_argument("--evaluate", type=pathlib.Path, help="Path to parquet file containing fill-in-the-blank "
+                                                              "queries with correct solutions to be able to calculate"
+                                                              " accuracy and mean reciprocal rank.")
     parser.add_argument("--predict", type=pathlib.Path, help="Path to parquet file with fill-in-the-blank queries to "
                                                              "make predictions on. Otherwise outfits.parquet is used "
                                                              "with correct answers to calculate mean reciprocal rank "
