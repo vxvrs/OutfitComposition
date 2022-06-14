@@ -162,11 +162,10 @@ def main(parse_args):
 
             r_rank = reciprocal_rank(missing_product, [r for r, _ in ranking])
             recip_ranks.append(r_rank)
-            print("Reciprocal rank:", r_rank)
 
         print("Mean reciprocal rank:", np.mean(recip_ranks))
         with open(f"{parse_args.dataset}/mean_recip_rank{clip_name}.txt", 'a+') as rank_file:
-            rank_file.write(f"MRR-{parse_args.modal}: {np.mean(recip_ranks)}")
+            rank_file.write(f"MRR-{parse_args.modal}: {np.mean(recip_ranks)}\n")
 
         clip_name = "_clip" if model else ""
         predicted_product.to_csv(f"{parse_args.dataset}/predicted_product{clip_name}_{parse_args.modal}.csv",
