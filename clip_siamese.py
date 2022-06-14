@@ -142,7 +142,7 @@ def main(parse_args):
                              allow_pickle=True).item() if "text" in parse_args.modal else None
     if processed_text: print("Processed text length:", len(processed_text))
 
-    processed_image_part = np.load(f"{parse_args.dataset}/processed_image_part_20.npy",
+    processed_image_part = np.load(f"{parse_args.dataset}/processed_image_part.npy",
                                    allow_pickle=True).item() if "image" in parse_args.modal else None
     if processed_image_part: print("Processed image length:", len(processed_image_part))
 

@@ -110,7 +110,7 @@ def main(parse_args):
                              allow_pickle=True).item() if "text" in parse_args.modal else None
     if processed_text: print("Processed text length:", len(processed_text))
 
-    processed_image_part = np.load(f"{parse_args.dataset}/processed_image_part_20.npy",
+    processed_image_part = np.load(f"{parse_args.dataset}/processed_image_part.npy",
                                    allow_pickle=True).item() if "image" in parse_args.modal else None
     if processed_image_part: print("Processed image length:", len(processed_image_part))
 
@@ -137,15 +137,16 @@ def main(parse_args):
             new_row = pd.DataFrame.from_dict({"outfit_id": [outfit_id], "predicted_product": [predicted_id]})
             predicted_product = pd.concat([predicted_product, new_row], ignore_index=True)
 
-        clip_name = "_clip" if model else ""
+        clip_name = "_clip" if not model else ""
         predicted_product.to_csv(
             f"{parse_args.dataset}/predicted_product{clip_name}_{parse_args.modal}_{parse_args.predict.stem}.csv",
             index=False)
     else:
         outfits = pd.read_parquet(f"{parse_args.dataset}/outfits.parquet", engine="pyarrow")
 
+        clip_name = "_clip" if not model else ""
         missing_product = outfits[["outfit_id", "missing_product"]]
-        missing_product.to_csv(f"{parse_args.dataset}/missing_product.csv", index=False)
+        missing_product.to_csv(f"{parse_args.dataset}/missing_product{clip_name}_{parse_args.modal}.csv", index=False)
 
         recip_ranks = list()
         row_to_embedded = outfits[["outfit_id", "incomplete_outfit", "candidates", "missing_product"]]
@@ -162,7 +163,7 @@ def main(parse_args):
             print("Reciprocal rank:", r_rank)
 
         print("Mean reciprocal rank:", np.mean(recip_ranks))
-        with open(f"{parse_args.dataset}/mean_recip_rank.txt", 'a+') as rank_file:
+        with open(f"{parse_args.dataset}/mean_recip_rank{clip_name}.txt", 'a+') as rank_file:
             rank_file.write(f"MRR-{parse_args.modal}: {np.mean(recip_ranks)}")
 
         clip_name = "_clip" if model else ""
