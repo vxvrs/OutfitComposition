@@ -50,6 +50,10 @@ def main(parse_args):
     if not parse_args.debug or args.unique_name:
         outfits.to_parquet(f"{parse_args.dataset}/outfits{unique_name}.parquet")
 
+    if parse_args.subset:
+        samples = outfits.sample(parse_args.subset)
+        samples.to_parquet(f"{parse_args.dataset}/outfits{unique_name}_{parse_args.subset}.parquet")
+
 
 if __name__ == "__main__":
     import argparse, pathlib
@@ -64,6 +68,9 @@ if __name__ == "__main__":
     parser.add_argument("--debug", action="store_true",
                         help="No files will be stored and additional information is printed used for debugging. "
                              "Files are stored if unique-names flag is set.")
+    parser.add_argument("--subset", type=int, nargs='?', const=30_000,
+                        help="Stores a subset with provided size of the outfit with fitb queries")
     args = parser.parse_args()
     if args.debug: print(args)
+    exit(0)
     main(args)
