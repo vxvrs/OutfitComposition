@@ -1,3 +1,19 @@
+"""
+Copyright 2022 Viggo Overes
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
 import clip
 import pandas as pd
 from PIL import Image
@@ -61,11 +77,11 @@ class FarfetchDataset(Dataset):
         with Image.open(image_path) as image:
             processed_image = self.preprocess(image)
 
-        return id, tokens, processed_image
+        return product_id, tokens, processed_image
 
     def __getitem__(self, idx):
-        id, text, image_path = self.dataframe.iloc[idx]
-        _, text, image_path = self.__process_row(id, text, image_path)
+        product_id, text, image_path = self.dataframe.iloc[idx]
+        _, text, image_path = self.__process_row(product_id, text, image_path)
         return text, image_path
 
     def get_product(self, product_id):
