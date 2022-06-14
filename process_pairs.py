@@ -1,3 +1,19 @@
+"""
+Copyright 2022 Viggo Overes
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
 import random
 from collections import Counter
 from itertools import combinations
@@ -12,6 +28,14 @@ from tqdm import tqdm
 
 
 def process_part_image(data, preprocess, most_common):
+    """
+    This function is used to return the processed dictionary containing the preprocessed images corresponding to the
+    most common product ids.
+    :param data: Dataframe containing the image path of the product image for each product id.
+    :param preprocess: Function that is used to preprocess an image
+    :param most_common: List of most common product ids to preprocess.
+    :return: Dictionary with a mapping from product ids to preprocessed image array.
+    """
     processed = dict()
     for product_id, _, image_path in tqdm(data.iloc, total=len(data)):
         if product_id not in most_common: continue
@@ -29,6 +53,7 @@ def main(parse_args):
 
     outfit_pairs = set()
 
+    # Positive pairs made from outfits
     for prods, _ in outfits.iloc:
         outfit_pairs.update([(x1, x2, 1) for x1, x2 in combinations(prods, 2)])
 
@@ -37,6 +62,7 @@ def main(parse_args):
     random_pairs = set()
     product_ids = product_ids.values.flatten()
 
+    # Negative pairs sampled from all products and checked if they are not already present
     while len(random_pairs) != len(used_outfit_pairs):
         s = np.random.choice(product_ids, 2)
 
@@ -46,6 +72,7 @@ def main(parse_args):
     print(
         f"Lengths:\noutfit_pairs: {len(outfit_pairs)}\tused_outfit_pairs: {len(used_outfit_pairs)}\trandom_pairs: {len(random_pairs)}")
 
+    # Calculate most common product ids
     all_pairs = used_outfit_pairs | random_pairs
     all_ids = [i for i1, i2, _ in all_pairs for i in [i1, i2]]
     print("Number of ids: ", len(set(all_ids)))
@@ -60,14 +87,15 @@ def main(parse_args):
 
     print(f"Train length: {len(train_pairs)}\t Test length: {len(test_pairs)}")
 
+    # Store all pairs
     pairs = {"train": train_pairs, "test": test_pairs}
     np.save(f"{parse_args.dataset}/pairs.npy", pairs)
 
     if parse_args.only_pairs: exit(0)
 
+    # Preprocess and store most common products for speedup
     device = "cuda" if torch.cuda.is_available() else "cpu"
     _, preprocess = clip.load("ViT-B/32", device=device, jit=False)
-
     products_txt_img = pd.read_parquet(f"{parse_args.dataset}/products_text_image.parquet", engine="pyarrow")
 
     processed = process_part_image(products_txt_img, preprocess, most_common)
@@ -92,7 +120,8 @@ if __name__ == "__main__":
     import argparse
     import pathlib
 
-    parser = argparse.ArgumentParser(formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+    parser = argparse.ArgumentParser(description="",
+                                     formatter_class=argparse.ArgumentDefaultsHelpFormatter)
     parser.add_argument("dataset", type=pathlib.Path,
                         help="Directory where products and outfits files are stored.")
     parser.add_argument("-s", "--size", type=int, default=200_000,

@@ -1,3 +1,19 @@
+"""
+Copyright 2022 Viggo Overes
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
 import time
 from random import randint
 
@@ -39,6 +55,7 @@ def main(parse_args):
     unique_name = f"_{int(time.time())}" if parse_args.unique_name else ""
     if parse_args.debug: print(unique_name)
 
+    # Not used, possibly remove
     if not parse_args.debug or args.unique_name:
         train_products.to_parquet(f"{parse_args.dataset}/products_train{unique_name}.parquet")
         test_products.to_parquet(f"{parse_args.dataset}/products_test{unique_name}.parquet")
