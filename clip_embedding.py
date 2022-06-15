@@ -167,7 +167,6 @@ def main(parse_args):
         with open(f"{parse_args.dataset}/mean_recip_rank{clip_name}.txt", 'a+') as rank_file:
             rank_file.write(f"MRR-{parse_args.modal}: {np.mean(recip_ranks)}\n")
 
-        clip_name = "_clip" if model else ""
         predicted_product.to_csv(f"{parse_args.dataset}/predicted_product{clip_name}_{parse_args.modal}.csv",
                                  index=False)
 
