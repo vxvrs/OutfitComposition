@@ -9,7 +9,8 @@ project, we consider the task of outfit completion in the context of the Farfetc
 Since the dataset used is multimodal, the task can be approached using multimodal machine learning. Here we look at
 using text and image data to train the model and its performance with unimodal and multimodal product
 representations. To do this we compose a Siamese neural network with the CLIP model in a zero-shot setting to train an
-encoder for the products. This encoder will learn a mapping where products that fit together map to a similar point and
+encoder for the products. The CLIP model will use its langauge and vision portions based on the input modality. This
+encoder will learn a mapping where products that fit together map to a similar point and
 products that don't to dissimilar points, since we are using contrastive loss with our Siamese network.
 You can see the configuration for the multimodal Siamese network in the figure below.
 
