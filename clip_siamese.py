@@ -1,3 +1,19 @@
+"""
+Copyright 2022 Viggo Overes
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
 import clip
 import numpy as np
 import pandas as pd
@@ -9,6 +25,13 @@ from torch.utils.data import Dataset, DataLoader
 
 
 class ProductPairs(Dataset):
+    """
+    Dataset that can be used in combination with Dataloader to load batches. The pairs consist of product ids and a
+    label. The product ids are used to load the product representation. This can either be preprocessed and loaded or is
+    processed on the fly. Based on the given modality textual data of the product, image or both is returned with the
+    label.
+    """
+
     def __init__(self, products, pairs, tokenizer, preprocess, modal, processed_text=None, processed_image=None):
         self.products = products
         self.pairs = pairs
@@ -58,6 +81,11 @@ class ProductPairs(Dataset):
 
 
 class SiameseNetwork(nn.Module):
+    """
+    Siamese network that consists of two encoders each with four linear fully connected layers that scale down in size
+    with a factor of 2.
+    """
+
     def __init__(self, input_size=1024):
         super(SiameseNetwork, self).__init__()
 
@@ -103,6 +131,15 @@ class ContrastiveLoss(torch.nn.Module):
 
 
 def clip_encode(device, clip_model, modal, text, image):
+    """
+    This function is used to encode text and image based on the given modality using the CLIP model.
+    :param device: Device to move the data to.
+    :param clip_model: CLIP model instance to encode text and image.
+    :param modal: Modality used indicating which data to return or concatenate.
+    :param text: Text data to encode.
+    :param image: Image data to encode.
+    :return: Data to be used by the network.
+    """
     with torch.no_grad():
         text_embed = clip_model.encode_text(text.to(device)) if "text" in modal else None
         image_embed = clip_model.encode_image(image.to(device)) if "image" in modal else None
@@ -118,6 +155,14 @@ def clip_encode(device, clip_model, modal, text, image):
 
 
 def process_batch(batch, device, clip_model, modal):
+    """
+    This function is used to encode a batch using the CLIP model.
+    :param batch: Batch of data to encode.
+    :param device: Device to move the data to.
+    :param clip_model: CLIP model instance to encode text and image.
+    :param modal: Modality used indicating which data to return or concatenate.
+    :return: Data for each product in the pairs with their labels to feed to the network.
+    """
     pid, text, image, label = batch
     label = label.to(device)
 

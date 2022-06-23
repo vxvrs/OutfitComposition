@@ -1,3 +1,19 @@
+"""
+Copyright 2022 Viggo Overes
+
+Licensed under the Apache License, Version 2.0 (the "License");
+you may not use this file except in compliance with the License.
+You may obtain a copy of the License at
+
+   http://www.apache.org/licenses/LICENSE-2.0
+
+Unless required by applicable law or agreed to in writing, software
+distributed under the License is distributed on an "AS IS" BASIS,
+WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+See the License for the specific language governing permissions and
+limitations under the License.
+"""
+
 import clip
 import numpy as np
 import pandas as pd
@@ -16,6 +32,11 @@ def reciprocal_rank(item, ranking):
 
 
 class OutfitEmbeddingCLIP:
+    """
+    Classes used to embed products and predict fill-in-the-blank queries either with just the CLIP model or with the
+    CLIP model in combination with provided model encoder.
+    """
+
     def __init__(self, products, modal, model: SiameseNetwork = None, device="cpu", processed_text=None,
                  processed_image=None):
         self.device = device
@@ -28,8 +49,6 @@ class OutfitEmbeddingCLIP:
         self.modal = modal
         self.processed_text = processed_text
         self.processed_image = processed_image
-
-        self.embedding = dict()
 
     def __process_row(self, row):
         product_id, text, image_path = row.iloc[0]
@@ -77,15 +96,6 @@ class OutfitEmbeddingCLIP:
                 encoding = self.encoder(encoding.to(self.device))
 
         return encoding.squeeze(0)
-
-    def setup_embedding(self):
-        for product_id in self.products["product_id"]:
-            self.embedding[product_id] = self.embed(product_id)
-
-        np.save(f"embedding_{self.modal}_{len(self.dataset)}.npy", self.embedding)
-
-    def load_embedding(self, filename):
-        self.embedding = np.load(filename, allow_pickle=True)
 
     def fitb(self, incomplete_outfit, candidates):
         outfit_embed = np.array([self.embed(product_id).cpu().numpy() for product_id in incomplete_outfit])
