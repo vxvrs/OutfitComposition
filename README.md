@@ -68,3 +68,13 @@ The following files are used to train, evaluate and make predictions with the mo
   in a zero-shot setting or a trained encoder to answer FITB queries.
     - **Files needed:** *products_text_image.parquet*, *processed_text.npy*, *processed_image_part.npy*,
       *outfits.parquet* (when file with FITB queries not provided)
+      
+ 
+## Citation
+If you use this code to produce results for your scientific publication, or if you share a copy or fork, please refer to our paper:
+```
+TBA
+}
+```
+
+
