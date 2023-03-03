@@ -1,6 +1,6 @@
 # Outfit Completion with Siamese Networks
 
-This repository contains the code used for the experiments in "Unimodal vs. Multimodal Siamese Networks for Outfit Completion" submitted to the [SIGIR 2022 Workshop on eCommerce](https://sigir-ecom.github.io/) outfit completion challenge.
+This repository contains the code used for the experiments in ["Unimodal vs. Multimodal Siamese Networks for Outfit Completion"](https://mariyahendriksen.github.io/files/sigir22_ecom.pdf) submitted to the [SIGIR 2022 Workshop on eCommerce](https://sigir-ecom.github.io/) outfit completion challenge.
 
 # Citation
 If you use this code to produce results for your scientific publication, or if you share a copy or fork, please refer to our paper:
