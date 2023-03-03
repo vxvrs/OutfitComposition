@@ -72,8 +72,13 @@ The following files are used to train, evaluate and make predictions with the mo
  
 ## Citation
 If you use this code to produce results for your scientific publication, or if you share a copy or fork, please refer to our paper:
-```
-TBA
+
+```latex
+@article{hendriksen-overes-2022-unimodal,
+  title={Unimodal vs. Multimodal Siamese Networks for Outfit Completion},
+  author={Hendriksen, Mariya and Overes, Viggo},
+  journal={arXiv preprint arXiv:2207.10355},
+  year={2022}
 }
 ```
 
