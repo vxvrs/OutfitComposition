@@ -82,4 +82,6 @@ The following files are used to train, evaluate and make predictions with the mo
       *outfits.parquet* (when file with FITB queries not provided)
       
 
+## [Paper](https://arxiv.org/abs/2207.10355)
 
+Link to arxiv entry.
