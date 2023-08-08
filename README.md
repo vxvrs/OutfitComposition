@@ -2,18 +2,6 @@
 
 This repository contains the code used for the experiments in ["Unimodal vs. Multimodal Siamese Networks for Outfit Completion"](https://mariyahendriksen.github.io/files/sigir22_ecom.pdf) submitted to the [SIGIR 2022 Workshop on eCommerce](https://sigir-ecom.github.io/) outfit completion challenge.
 
-# Citation
-If you use this code to produce results for your scientific publication, or if you share a copy or fork, please refer to our paper:
-
-```latex
-@article{hendriksen-overes-2022-unimodal,
-  title={Unimodal vs. Multimodal Siamese Networks for Outfit Completion},
-  author={Hendriksen, Mariya and Overes, Viggo},
-  journal={arXiv preprint arXiv:2207.10355},
-  year={2022}
-}
-```
-
 # Task Description
 Outfit completion is a task when, given an item, the model is to recommend products that complete the outfit. In this
 project, we consider the task of outfit completion in the context of the Farfetch Data Challenge.
@@ -82,6 +70,14 @@ The following files are used to train, evaluate and make predictions with the mo
       *outfits.parquet* (when file with FITB queries not provided)
       
 
-## [Paper](https://arxiv.org/abs/2207.10355)
+## Citing and Authors
+If you find this repository helpful, feel free to cite our paper [A Unified Framework for Learned Sparse Retrieval](https://arxiv.org/abs/2207.10355):
 
-Link to arxiv entry.
+```latex
+@article{hendriksen-overes-2022-unimodal,
+  title={Unimodal vs. Multimodal Siamese Networks for Outfit Completion},
+  author={Hendriksen, Mariya and Overes, Viggo},
+  journal={arXiv preprint arXiv:2207.10355},
+  year={2022}
+}
+```
