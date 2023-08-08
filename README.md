@@ -71,7 +71,7 @@ The following files are used to train, evaluate and make predictions with the mo
       
 
 ## Citing and Authors
-If you find this repository helpful, feel free to cite our paper [A Unified Framework for Learned Sparse Retrieval](https://arxiv.org/abs/2207.10355):
+If you find this repository helpful, feel free to cite our paper [Unimodal vs. Multimodal Siamese Networks for Outfit Completion](https://arxiv.org/abs/2207.10355):
 
 ```latex
 @article{hendriksen-overes-2022-unimodal,
